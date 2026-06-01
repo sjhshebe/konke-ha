@@ -26,14 +26,14 @@ BACKUP_DIR="$CONFIG_DIR/konke-backups"
 
 download() {
   if command -v curl >/dev/null 2>&1; then
-    if curl -fsSL --http1.1 "$ARCHIVE_URL" -o "$ARCHIVE"; then
+    if curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 "$ARCHIVE_URL" -o "$ARCHIVE"; then
       return
     fi
     echo "curl download failed; trying wget..."
   fi
 
   if command -v wget >/dev/null 2>&1; then
-    wget -q "$ARCHIVE_URL" -O "$ARCHIVE"
+    wget -q -T 30 -t 3 "$ARCHIVE_URL" -O "$ARCHIVE"
     return
   fi
 
