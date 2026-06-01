@@ -7,9 +7,7 @@
 1. 将本目录里的 `custom_components/konke` 复制到 Home Assistant 的 `/config/custom_components/konke`。
 2. 重启 Home Assistant。
 3. 进入 `设置 -> 设备与服务 -> 添加集成`，搜索 `控客智能` 或 `Konke Smart`。
-4. 选择登录方式：
-   - `Access Token`: 填控客 `accessToken`，最快。
-   - `手机号和密码`: 填控客账号手机号和密码，由集成登录并保存 token。
+4. 选择 `手机号和密码` 登录，填写控客账号手机号和密码；集成会自动登录控客接口，并保存后续请求需要的 token。
 
 ## 已确认接口
 
