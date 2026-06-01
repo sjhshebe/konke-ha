@@ -44,8 +44,7 @@ Do not paste raw captures, tokens, phone numbers, passwords, or home addresses h
   - observed modes: `COLD`, `HOT`, `WIND`, `DEHUM`
   - observed fan speeds: `AUTO`, `LOW`, `MEDIUM`, `HIGH`
   - successful response shape: `{"code": 200, "info": "SUCCESS", "data": {}, "messageId": "..."}`
-  - implemented power-off path by `command.py` and `api.py`; the additional
-    actions are captured but not yet implemented in HA.
+  - implemented by `command.py`, `api.py`, and the HA `climate` platform.
 - Authentication behavior:
   - The Android app and HA integration can both obtain access tokens through
     `POST /account/login`.
@@ -69,6 +68,7 @@ Do not paste raw captures, tokens, phone numbers, passwords, or home addresses h
   - pause body shape: `{"userDeviceId": <int>, "name": "Pause"}`
   - cache fields observed: `operationMode`, `workMode`, `routeState`,
     `position`, `innerType`, `cateType`, `userExtension`, `isOnline`.
+  - implemented by `command.py`, `api.py`, and the HA `cover` platform.
 - Floor-heating actions for `virtual_FH_3in1_mix` nodes:
   - endpoint: `POST /api/device/action/control`
   - device type validated: `virtual_FH_3in1_mix` / `floor_heating` /
@@ -84,6 +84,7 @@ Do not paste raw captures, tokens, phone numbers, passwords, or home addresses h
   - cache fields observed: `turnOnOff`, `currentTemperature`, `workMode`,
     `temperature`, `timingOffTime`, `nodeId`, `innerType`, `cateType`,
     `userExtension`, `isOnline`.
+  - implemented by `command.py`, `api.py`, and the HA `climate` platform.
 - Fresh-air read-only shape:
   - device type observed: `virtual_AF_3in1_mix` / `air_fresher_panel` /
     `AirFresher`

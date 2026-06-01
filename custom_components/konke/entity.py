@@ -5,10 +5,12 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_HOME_ID
 from .coordinator import KonkeDataUpdateCoordinator
+from .exceptions import KonkeAuthError
 from .models import KonkeDevice
 from .registry import home_device_info, konke_device_info
 
@@ -31,7 +33,8 @@ class KonkeEntity(CoordinatorEntity[KonkeDataUpdateCoordinator]):
     def konke_home_id(self) -> str:
         """Return the configured or discovered Konke home id."""
         home = self.coordinator.data.get("home", {})
-        return str(home.get("homeId") or self._entry.data.get(CONF_HOME_ID))
+        home_id = home.get("homeId") or self._entry.data.get(CONF_HOME_ID)
+        return "" if home_id is None else str(home_id)
 
     @property
     def device_info(self) -> dict[str, Any]:
@@ -80,3 +83,42 @@ class KonkeDeviceEntity(KonkeEntity):
             device,
             devices_by_id=self.coordinator.data.get("normalized_devices_by_id", {}),
         )
+
+    async def async_control_device(
+        self,
+        action_name: str,
+        *,
+        extension: dict[str, Any] | str | None = None,
+        extra: dict[str, Any] | None = None,
+        refresh: bool = True,
+    ) -> dict[str, Any]:
+        """Send a control command for this entity's Konke device."""
+        device = self.konke_device
+        if device is None:
+            raise HomeAssistantError(f"Konke device not found: {self._device_id}")
+        home_id = self.konke_home_id
+        if not home_id:
+            raise HomeAssistantError("Konke home_id not found")
+
+        try:
+            result = await self.coordinator.client.control_device(
+                home_id=home_id,
+                user_device_id=device.user_device_id,
+                action_name=action_name,
+                extension=extension,
+                extra=extra,
+            )
+        except KonkeAuthError:
+            if not await self.coordinator.async_refresh_auth():
+                raise
+            result = await self.coordinator.client.control_device(
+                home_id=home_id,
+                user_device_id=device.user_device_id,
+                action_name=action_name,
+                extension=extension,
+                extra=extra,
+            )
+
+        if refresh:
+            await self.coordinator.async_request_refresh()
+        return result

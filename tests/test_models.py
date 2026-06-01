@@ -55,9 +55,26 @@ class ModelTest(unittest.TestCase):
         """Device indexes expose capability and entity descriptors."""
         indexes = build_device_indexes(load_devices())
 
-        self.assertEqual(sorted(indexes["devices_by_id"]), ["1001", "2001"])
-        self.assertEqual(indexes["device_ids_by_capability"]["air_conditioner"], ["1001"])
-        self.assertEqual(indexes["device_ids_by_capability"]["switch"], ["2001"])
+        self.assertEqual(
+            sorted(indexes["devices_by_id"]),
+            ["1001", "2001", "3001", "4001"],
+        )
+        self.assertEqual(
+            indexes["device_ids_by_capability"][KonkeCapability.AIR_CONDITIONER.value],
+            ["1001"],
+        )
+        self.assertEqual(
+            indexes["device_ids_by_capability"][KonkeCapability.FLOOR_HEATING.value],
+            ["3001"],
+        )
+        self.assertEqual(
+            indexes["device_ids_by_capability"][KonkeCapability.COVER.value],
+            ["4001"],
+        )
+        self.assertEqual(
+            indexes["device_ids_by_capability"][KonkeCapability.SWITCH.value],
+            ["2001"],
+        )
         self.assertEqual(
             {
                 (item["device_id"], item["capability"], item["platform"])
@@ -66,5 +83,7 @@ class ModelTest(unittest.TestCase):
             {
                 ("1001", "air_conditioner", "climate"),
                 ("2001", "switch", "switch"),
+                ("3001", KonkeCapability.FLOOR_HEATING.value, "climate"),
+                ("4001", "cover", "cover"),
             },
         )

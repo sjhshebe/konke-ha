@@ -49,7 +49,12 @@ homeassistant.const.CONF_USERNAME = "username"
 
 class _Platform(str, Enum):
     CLIMATE = "climate"
+    COVER = "cover"
+    FAN = "fan"
+    LIGHT = "light"
     SCENE = "scene"
+    SENSOR = "sensor"
+    SWITCH = "switch"
 
 
 homeassistant.const.Platform = _Platform
@@ -98,7 +103,12 @@ class _ConfigEntryAuthFailed(Exception):
     pass
 
 
+class _HomeAssistantError(Exception):
+    pass
+
+
 homeassistant.exceptions.ConfigEntryAuthFailed = _ConfigEntryAuthFailed
+homeassistant.exceptions.HomeAssistantError = _HomeAssistantError
 
 helpers = sys.modules.setdefault(
     "homeassistant.helpers",

@@ -4,30 +4,40 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.climate import (
-    ClimateEntity,
+from homeassistant.components.climate import ClimateEntity
+from homeassistant.components.climate.const import (
     ClimateEntityFeature,
+    FAN_AUTO,
+    FAN_HIGH,
+    FAN_LOW,
+    FAN_MEDIUM,
     HVACAction,
     HVACMode,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature
+from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .capabilities import KonkeCapability
-from .const import CONF_HOME_ID, DOMAIN
+from .command import (
+    ACTION_SET_MODE,
+    ACTION_SET_TEMPERATURE,
+    ACTION_SET_WIND_SPEED,
+    ACTION_TURN_OFF,
+    ACTION_TURN_ON,
+)
+from .const import DOMAIN
 from .coordinator import KonkeDataUpdateCoordinator
 from .entity import KonkeDeviceEntity
-from .exceptions import KonkeAuthError
 from .models import KonkeDevice, maybe_bool, nested
 from .options import options_from_entry
 
-_MODE_TO_HVAC = {
-    "AUTO": HVACMode.AUTO,
+_AIR_CONDITIONER_MODE_TO_HVAC = {
     "COLD": HVACMode.COOL,
     "COOL": HVACMode.COOL,
+    "DEHUM": HVACMode.DRY,
     "DRY": HVACMode.DRY,
     "HEAT": HVACMode.HEAT,
     "HOT": HVACMode.HEAT,
@@ -36,12 +46,45 @@ _MODE_TO_HVAC = {
     "FAN": HVACMode.FAN_ONLY,
 }
 
-_WORK_MODE_TO_HVAC = {
-    0: HVACMode.AUTO,
+_AIR_CONDITIONER_WORK_MODE_TO_HVAC = {
     1: HVACMode.COOL,
     2: HVACMode.HEAT,
     3: HVACMode.FAN_ONLY,
     4: HVACMode.DRY,
+}
+
+_AIR_CONDITIONER_HVAC_TO_MODE = {
+    HVACMode.COOL: "COLD",
+    HVACMode.HEAT: "HOT",
+    HVACMode.FAN_ONLY: "WIND",
+    HVACMode.DRY: "DEHUM",
+}
+
+_AIR_CONDITIONER_FAN_MODES = [FAN_AUTO, FAN_LOW, FAN_MEDIUM, FAN_HIGH]
+_AIR_CONDITIONER_FAN_ALIASES = {
+    "AUTO": FAN_AUTO,
+    "HIGH": FAN_HIGH,
+    "LOW": FAN_LOW,
+    "MED": FAN_MEDIUM,
+    "MIDDLE": FAN_MEDIUM,
+    "MID": FAN_MEDIUM,
+    "MEDIUM": FAN_MEDIUM,
+}
+_AIR_CONDITIONER_FAN_TO_KONKE = {
+    FAN_AUTO: "AUTO",
+    FAN_HIGH: "HIGH",
+    FAN_LOW: "LOW",
+    FAN_MEDIUM: "MEDIUM",
+}
+
+_FLOOR_HEATING_WORK_MODE_TO_HVAC = {
+    0: HVACMode.AUTO,
+    1: HVACMode.HEAT,
+}
+
+_FLOOR_HEATING_HVAC_TO_MODE = {
+    HVACMode.AUTO: 0,
+    HVACMode.HEAT: 1,
 }
 
 
@@ -50,32 +93,28 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Konke air conditioners from a config entry."""
+    """Set up Konke climate devices from a config entry."""
     coordinator: KonkeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    device_ids = coordinator.data.get("device_ids_by_capability", {}).get(
-        KonkeCapability.AIR_CONDITIONER.value,
-        [],
-    )
-    if options_from_entry(entry).create_offline_device_entities is False:
-        devices_by_id = coordinator.data.get("normalized_devices_by_id", {})
-        device_ids = [
-            device_id
-            for device_id in device_ids
-            if devices_by_id.get(device_id) is not None
-            and devices_by_id[device_id].online is not False
-        ]
     async_add_entities(
-        KonkeAirConditionerClimate(coordinator, entry, device_id)
-        for device_id in sorted(device_ids, key=_sort_device_id)
+        [
+            KonkeAirConditionerClimate(coordinator, entry, device_id)
+            for device_id in _device_ids_for_capability(
+                coordinator, entry, KonkeCapability.AIR_CONDITIONER
+            )
+        ]
+        + [
+            KonkeFloorHeatingClimate(coordinator, entry, device_id)
+            for device_id in _device_ids_for_capability(
+                coordinator, entry, KonkeCapability.FLOOR_HEATING
+            )
+        ]
     )
 
 
-class KonkeAirConditionerClimate(KonkeDeviceEntity, ClimateEntity):
-    """Representation of a Konke air conditioner."""
+class KonkeClimateBase(KonkeDeviceEntity, ClimateEntity):
+    """Shared behavior for Konke climate entities."""
 
-    _attr_icon = "mdi:air-conditioner"
     _attr_precision = 0.5
-    _attr_supported_features = ClimateEntityFeature.TURN_OFF
     _attr_target_temperature_step = 0.5
     _enable_turn_on_off_backwards_compatibility = False
 
@@ -84,10 +123,14 @@ class KonkeAirConditionerClimate(KonkeDeviceEntity, ClimateEntity):
         coordinator: KonkeDataUpdateCoordinator,
         entry: ConfigEntry,
         device_id: str,
+        *,
+        unique_id_suffix: str,
     ) -> None:
         """Initialize the climate entity."""
         super().__init__(coordinator, entry, device_id)
-        self._attr_unique_id = f"{DOMAIN}_{self.konke_home_id}_climate_{device_id}"
+        self._attr_unique_id = (
+            f"{DOMAIN}_{self.konke_home_id}_{unique_id_suffix}_{device_id}"
+        )
 
     @property
     def name(self) -> str | None:
@@ -101,60 +144,16 @@ class KonkeAirConditionerClimate(KonkeDeviceEntity, ClimateEntity):
         return UnitOfTemperature.CELSIUS
 
     @property
-    def hvac_modes(self) -> list[HVACMode]:
-        """Return supported HVAC modes for state representation."""
-        mode = self.hvac_mode
-        modes = [HVACMode.OFF]
-        if mode and mode is not HVACMode.OFF:
-            modes.append(mode)
-        if HVACMode.COOL not in modes:
-            modes.append(HVACMode.COOL)
-        return modes
-
-    @property
-    def hvac_mode(self) -> HVACMode | None:
-        """Return the current HVAC mode."""
-        device = self.konke_device
-        if device is None:
-            return HVACMode.OFF
-        if device.power_on is False:
-            return HVACMode.OFF
-
-        state = _current_state(device)
-        mode = _state_hvac_mode(state)
-        if mode is not None:
-            return mode
-
-        if device.power_on is True:
-            return HVACMode.COOL
-        return HVACMode.OFF
-
-    @property
-    def hvac_action(self) -> HVACAction | None:
-        """Return the current HVAC action."""
-        mode = self.hvac_mode
-        if mode is HVACMode.OFF:
-            return HVACAction.OFF
-        if mode is HVACMode.HEAT:
-            return HVACAction.HEATING
-        if mode is HVACMode.COOL:
-            return HVACAction.COOLING
-        if mode is HVACMode.DRY:
-            return HVACAction.DRYING
-        if mode is HVACMode.FAN_ONLY:
-            return HVACAction.FAN
-        if mode is HVACMode.AUTO:
-            return HVACAction.IDLE
-        return None
-
-    @property
     def current_temperature(self) -> float | None:
         """Return the current temperature."""
         device = self.konke_device
         if device is None:
             return None
-        state = _current_state(device)
-        return _float_from_state(state, "curTemp", "currentTemperature")
+        return _float_from_state(
+            _current_state(device),
+            "curTemp",
+            "currentTemperature",
+        )
 
     @property
     def target_temperature(self) -> float | None:
@@ -162,8 +161,11 @@ class KonkeAirConditionerClimate(KonkeDeviceEntity, ClimateEntity):
         device = self.konke_device
         if device is None:
             return None
-        state = _current_state(device)
-        return _float_from_state(state, "setTemp", "temperature")
+        return _float_from_state(
+            _current_state(device),
+            "setTemp",
+            "temperature",
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -188,44 +190,266 @@ class KonkeAirConditionerClimate(KonkeDeviceEntity, ClimateEntity):
             "power_on": device.power_on,
         }
 
+    async def async_turn_on(self) -> None:
+        """Turn the climate device on."""
+        await self.async_control_device(ACTION_TURN_ON)
+
     async def async_turn_off(self) -> None:
-        """Turn the air conditioner off."""
+        """Turn the climate device off."""
+        await self.async_control_device(ACTION_TURN_OFF)
+
+    async def _async_set_temperature_value(self, temperature: Any) -> None:
+        """Set a numeric target temperature."""
+        if temperature is None:
+            return
+        try:
+            value = float(temperature)
+        except (TypeError, ValueError) as err:
+            raise HomeAssistantError("Konke temperature must be numeric") from err
+        await self.async_control_device(
+            ACTION_SET_TEMPERATURE,
+            extension={"value": value},
+        )
+
+
+class KonkeAirConditionerClimate(KonkeClimateBase):
+    """Representation of a Konke air conditioner."""
+
+    _attr_icon = "mdi:air-conditioner"
+    _attr_supported_features = (
+        ClimateEntityFeature.TURN_ON
+        | ClimateEntityFeature.TURN_OFF
+        | ClimateEntityFeature.TARGET_TEMPERATURE
+        | ClimateEntityFeature.FAN_MODE
+    )
+
+    def __init__(
+        self,
+        coordinator: KonkeDataUpdateCoordinator,
+        entry: ConfigEntry,
+        device_id: str,
+    ) -> None:
+        """Initialize the air-conditioner entity."""
+        super().__init__(
+            coordinator,
+            entry,
+            device_id,
+            unique_id_suffix="climate",
+        )
+
+    @property
+    def min_temp(self) -> float:
+        """Return the minimum supported target temperature."""
+        return 16.0
+
+    @property
+    def max_temp(self) -> float:
+        """Return the maximum supported target temperature."""
+        return 30.0
+
+    @property
+    def hvac_modes(self) -> list[HVACMode]:
+        """Return supported HVAC modes."""
+        return [
+            HVACMode.OFF,
+            HVACMode.COOL,
+            HVACMode.HEAT,
+            HVACMode.FAN_ONLY,
+            HVACMode.DRY,
+        ]
+
+    @property
+    def hvac_mode(self) -> HVACMode | None:
+        """Return the current HVAC mode."""
         device = self.konke_device
         if device is None:
-            raise HomeAssistantError(f"Konke device not found: {self._device_id}")
+            return HVACMode.OFF
+        if device.power_on is False:
+            return HVACMode.OFF
 
-        home_id = self._entry.data.get(CONF_HOME_ID)
-        if not home_id:
-            home_id = self.coordinator.data.get("home", {}).get("homeId")
-        if not home_id:
-            raise HomeAssistantError("Konke home_id not found")
+        state = _current_state(device)
+        mode = _air_conditioner_hvac_mode(state)
+        if mode is not None:
+            return mode
 
-        try:
-            await self.coordinator.client.turn_off_air_conditioner(
-                home_id=home_id,
-                device=dict(device.raw),
-            )
-        except KonkeAuthError:
-            if not await self.coordinator.async_refresh_auth():
-                raise
-            await self.coordinator.client.turn_off_air_conditioner(
-                home_id=home_id,
-                device=dict(device.raw),
-            )
-        await self.coordinator.async_request_refresh()
+        if device.power_on is True:
+            return HVACMode.COOL
+        return HVACMode.OFF
+
+    @property
+    def hvac_action(self) -> HVACAction | None:
+        """Return the current HVAC action."""
+        return _hvac_action_from_mode(self.hvac_mode)
+
+    @property
+    def fan_modes(self) -> list[str]:
+        """Return supported fan modes."""
+        return list(_AIR_CONDITIONER_FAN_MODES)
+
+    @property
+    def fan_mode(self) -> str | None:
+        """Return the current fan mode."""
+        device = self.konke_device
+        if device is None:
+            return None
+        raw_speed = _current_state(device).get("speed") or _current_state(device).get(
+            "windSpeed"
+        )
+        if raw_speed is None:
+            return None
+        return _AIR_CONDITIONER_FAN_ALIASES.get(str(raw_speed).upper())
+
+    async def async_set_temperature(self, **kwargs: Any) -> None:
+        """Set target temperature."""
+        await self._async_set_temperature_value(kwargs.get(ATTR_TEMPERATURE))
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        """Set HVAC mode.
-
-        Only off is implemented until the corresponding Konke commands have
-        been captured and tested.
-        """
-        if hvac_mode is HVACMode.OFF:
+        """Set HVAC mode."""
+        if hvac_mode == HVACMode.OFF:
             await self.async_turn_off()
             return
-        raise HomeAssistantError(
-            "Konke air conditioner currently only supports turning off"
+
+        konke_mode = _AIR_CONDITIONER_HVAC_TO_MODE.get(hvac_mode)
+        if konke_mode is None:
+            raise HomeAssistantError(
+                f"Konke air conditioner does not support HVAC mode: {hvac_mode}"
+            )
+
+        if self.hvac_mode == HVACMode.OFF:
+            await self.async_control_device(ACTION_TURN_ON, refresh=False)
+        await self.async_control_device(
+            ACTION_SET_MODE,
+            extension={"mode": konke_mode},
         )
+
+    async def async_set_fan_mode(self, fan_mode: str) -> None:
+        """Set fan mode."""
+        normalized = _AIR_CONDITIONER_FAN_ALIASES.get(str(fan_mode).upper())
+        if normalized not in _AIR_CONDITIONER_FAN_MODES:
+            raise HomeAssistantError(
+                f"Konke air conditioner does not support fan mode: {fan_mode}"
+            )
+        await self.async_control_device(
+            ACTION_SET_WIND_SPEED,
+            extension={"speed": _AIR_CONDITIONER_FAN_TO_KONKE[normalized]},
+        )
+
+
+class KonkeFloorHeatingClimate(KonkeClimateBase):
+    """Representation of a Konke floor-heating controller."""
+
+    _attr_icon = "mdi:heating-coil"
+    _attr_supported_features = (
+        ClimateEntityFeature.TURN_ON
+        | ClimateEntityFeature.TURN_OFF
+        | ClimateEntityFeature.TARGET_TEMPERATURE
+    )
+
+    def __init__(
+        self,
+        coordinator: KonkeDataUpdateCoordinator,
+        entry: ConfigEntry,
+        device_id: str,
+    ) -> None:
+        """Initialize the floor-heating entity."""
+        super().__init__(
+            coordinator,
+            entry,
+            device_id,
+            unique_id_suffix="heating",
+        )
+
+    @property
+    def min_temp(self) -> float:
+        """Return the minimum supported target temperature."""
+        return 5.0
+
+    @property
+    def max_temp(self) -> float:
+        """Return the maximum supported target temperature."""
+        return 40.0
+
+    @property
+    def hvac_modes(self) -> list[HVACMode]:
+        """Return supported HVAC modes."""
+        return [HVACMode.OFF, HVACMode.HEAT, HVACMode.AUTO]
+
+    @property
+    def hvac_mode(self) -> HVACMode | None:
+        """Return the current HVAC mode."""
+        device = self.konke_device
+        if device is None:
+            return HVACMode.OFF
+        if device.power_on is False:
+            return HVACMode.OFF
+
+        state = _current_state(device)
+        power = _power_from_state(state)
+        if power is False:
+            return HVACMode.OFF
+
+        mode = _floor_heating_hvac_mode(state)
+        if mode is not None:
+            return mode
+
+        if device.power_on is True:
+            return HVACMode.HEAT
+        return HVACMode.OFF
+
+    @property
+    def hvac_action(self) -> HVACAction | None:
+        """Return the current HVAC action."""
+        mode = self.hvac_mode
+        if mode == HVACMode.OFF:
+            return HVACAction.OFF
+        if mode == HVACMode.HEAT:
+            return HVACAction.HEATING
+        if mode == HVACMode.AUTO:
+            return HVACAction.IDLE
+        return None
+
+    async def async_set_temperature(self, **kwargs: Any) -> None:
+        """Set target temperature."""
+        await self._async_set_temperature_value(kwargs.get(ATTR_TEMPERATURE))
+
+    async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+        """Set floor-heating mode."""
+        if hvac_mode == HVACMode.OFF:
+            await self.async_turn_off()
+            return
+
+        konke_mode = _FLOOR_HEATING_HVAC_TO_MODE.get(hvac_mode)
+        if konke_mode is None:
+            raise HomeAssistantError(
+                f"Konke floor heating does not support HVAC mode: {hvac_mode}"
+            )
+
+        if self.hvac_mode == HVACMode.OFF:
+            await self.async_control_device(ACTION_TURN_ON, refresh=False)
+        await self.async_control_device(
+            ACTION_SET_MODE,
+            extension={"mode": konke_mode},
+        )
+
+
+def _device_ids_for_capability(
+    coordinator: KonkeDataUpdateCoordinator,
+    entry: ConfigEntry,
+    capability: KonkeCapability,
+) -> list[str]:
+    """Return sorted device ids for a capability, honoring offline options."""
+    device_ids = list(
+        coordinator.data.get("device_ids_by_capability", {}).get(capability.value, [])
+    )
+    if options_from_entry(entry).create_offline_device_entities is False:
+        devices_by_id = coordinator.data.get("normalized_devices_by_id", {})
+        device_ids = [
+            device_id
+            for device_id in device_ids
+            if devices_by_id.get(device_id) is not None
+            and devices_by_id[device_id].online is not False
+        ]
+    return sorted(device_ids, key=_sort_device_id)
 
 
 def _current_state(device: KonkeDevice) -> dict[str, Any]:
@@ -239,17 +463,23 @@ def _current_state(device: KonkeDevice) -> dict[str, Any]:
     return {}
 
 
-def _state_hvac_mode(state: dict[str, Any]) -> HVACMode | None:
-    """Return a HA HVAC mode from a Konke cached state payload."""
-    power = maybe_bool(state.get("on"))
-    if power is None:
-        power = maybe_bool(state.get("turnOnOff"))
-    if power is False:
+def _power_from_state(state: dict[str, Any]) -> bool | None:
+    """Return cached power state from a current-state payload."""
+    for key in ("on", "turnOnOff"):
+        power = maybe_bool(state.get(key))
+        if power is not None:
+            return power
+    return None
+
+
+def _air_conditioner_hvac_mode(state: dict[str, Any]) -> HVACMode | None:
+    """Return a HA HVAC mode from a Konke air-conditioner state payload."""
+    if _power_from_state(state) is False:
         return HVACMode.OFF
 
     raw_mode = state.get("mode")
     if raw_mode is not None:
-        mode = _MODE_TO_HVAC.get(str(raw_mode).upper())
+        mode = _AIR_CONDITIONER_MODE_TO_HVAC.get(str(raw_mode).upper())
         if mode is not None:
             return mode
 
@@ -258,7 +488,34 @@ def _state_hvac_mode(state: dict[str, Any]) -> HVACMode | None:
         work_mode = int(raw_work_mode)
     except (TypeError, ValueError):
         return None
-    return _WORK_MODE_TO_HVAC.get(work_mode)
+    return _AIR_CONDITIONER_WORK_MODE_TO_HVAC.get(work_mode)
+
+
+def _floor_heating_hvac_mode(state: dict[str, Any]) -> HVACMode | None:
+    """Return a HA HVAC mode from a Konke floor-heating state payload."""
+    raw_work_mode = state.get("workMode")
+    try:
+        work_mode = int(raw_work_mode)
+    except (TypeError, ValueError):
+        return None
+    return _FLOOR_HEATING_WORK_MODE_TO_HVAC.get(work_mode)
+
+
+def _hvac_action_from_mode(mode: HVACMode | None) -> HVACAction | None:
+    """Return a generic HA HVAC action from an HVAC mode."""
+    if mode == HVACMode.OFF:
+        return HVACAction.OFF
+    if mode == HVACMode.HEAT:
+        return HVACAction.HEATING
+    if mode == HVACMode.COOL:
+        return HVACAction.COOLING
+    if mode == HVACMode.DRY:
+        return HVACAction.DRYING
+    if mode == HVACMode.FAN_ONLY:
+        return HVACAction.FAN
+    if mode == HVACMode.AUTO:
+        return HVACAction.IDLE
+    return None
 
 
 def _float_from_state(state: dict[str, Any], *keys: str) -> float | None:

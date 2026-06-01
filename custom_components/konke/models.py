@@ -298,6 +298,7 @@ def build_entity_descriptors(devices: list[KonkeDevice]) -> list[dict[str, Any]]
             )
     return descriptors
 
+
 def build_device_indexes(devices: list[Mapping[str, Any]]) -> dict[str, Any]:
     """Build normalized device indexes while preserving raw API payloads."""
     normalized: list[KonkeDevice] = []

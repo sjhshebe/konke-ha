@@ -9,7 +9,16 @@ from typing import Any
 
 from aiohttp import ClientError, ClientResponse, ClientSession
 
-from .command import air_conditioner_turn_off_action, build_device_action_body
+from .command import (
+    ACTION_PAUSE,
+    ACTION_SET_MODE,
+    ACTION_SET_TEMPERATURE,
+    ACTION_SET_WIND_SPEED,
+    ACTION_TURN_OFF,
+    ACTION_TURN_ON,
+    air_conditioner_turn_off_action,
+    build_device_action_body,
+)
 from .profile import (
     ACCOUNT_BASE_URL,
     API_BASE_URL,
@@ -349,8 +358,6 @@ class KonkeApiClient:
             extension=extension,
             extra=extra,
         )
-        if extension is not None:
-            body["extension"] = extension if isinstance(extension, str) else json.dumps(extension)
         return await self._request(
             "POST",
             "/device/action/control",
@@ -370,6 +377,90 @@ class KonkeApiClient:
             home_id=home_id,
             user_device_id=user_device_id,
             action_name=action_name,
+        )
+
+    async def turn_on_device(
+        self,
+        *,
+        home_id: str | int,
+        user_device_id: str | int,
+    ) -> dict[str, Any]:
+        """Turn on a Konke device."""
+        return await self.control_device(
+            home_id=home_id,
+            user_device_id=user_device_id,
+            action_name=ACTION_TURN_ON,
+        )
+
+    async def turn_off_device(
+        self,
+        *,
+        home_id: str | int,
+        user_device_id: str | int,
+    ) -> dict[str, Any]:
+        """Turn off a Konke device."""
+        return await self.control_device(
+            home_id=home_id,
+            user_device_id=user_device_id,
+            action_name=ACTION_TURN_OFF,
+        )
+
+    async def pause_device(
+        self,
+        *,
+        home_id: str | int,
+        user_device_id: str | int,
+    ) -> dict[str, Any]:
+        """Pause a Konke device."""
+        return await self.control_device(
+            home_id=home_id,
+            user_device_id=user_device_id,
+            action_name=ACTION_PAUSE,
+        )
+
+    async def set_device_temperature(
+        self,
+        *,
+        home_id: str | int,
+        user_device_id: str | int,
+        temperature: float,
+    ) -> dict[str, Any]:
+        """Set target temperature for a Konke climate device."""
+        return await self.control_device(
+            home_id=home_id,
+            user_device_id=user_device_id,
+            action_name=ACTION_SET_TEMPERATURE,
+            extension={"value": float(temperature)},
+        )
+
+    async def set_device_mode(
+        self,
+        *,
+        home_id: str | int,
+        user_device_id: str | int,
+        mode: str | int,
+    ) -> dict[str, Any]:
+        """Set mode for a Konke climate device."""
+        return await self.control_device(
+            home_id=home_id,
+            user_device_id=user_device_id,
+            action_name=ACTION_SET_MODE,
+            extension={"mode": mode},
+        )
+
+    async def set_air_conditioner_fan_speed(
+        self,
+        *,
+        home_id: str | int,
+        user_device_id: str | int,
+        speed: str,
+    ) -> dict[str, Any]:
+        """Set fan speed for a Konke air conditioner."""
+        return await self.control_device(
+            home_id=home_id,
+            user_device_id=user_device_id,
+            action_name=ACTION_SET_WIND_SPEED,
+            extension={"speed": speed},
         )
 
     async def fetch_devices(

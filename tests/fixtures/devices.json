@@ -48,5 +48,55 @@
         }
       }
     }
+  },
+  {
+    "userDeviceId": "3001",
+    "deviceName": "地暖",
+    "roomId": "room-living",
+    "roomName": "客厅",
+    "device": {
+      "cateType": "FloorHeating",
+      "deviceType": {
+        "cateType": "FloorHeating",
+        "innerType": "floor_heating",
+        "productId": "kk-floor-heating",
+        "typeName": "地暖",
+        "actionList": ["TurnOn", "TurnOff", "SetTemperature", "SetMode"]
+      }
+    },
+    "cache": {
+      "isOnline": true,
+      "extension": {
+        "turnOnOff": false,
+        "currentTemperature": 25.5,
+        "temperature": 26,
+        "workMode": 1
+      }
+    }
+  },
+  {
+    "userDeviceId": "4001",
+    "deviceName": "窗帘",
+    "roomId": "room-living",
+    "roomName": "客厅",
+    "device": {
+      "cateType": "CurtainsMotor",
+      "deviceType": {
+        "cateType": "CurtainsMotor",
+        "innerType": "curtain_motor",
+        "productId": "3215",
+        "typeName": "窗帘电机",
+        "actionList": ["TurnOn", "TurnOff", "Pause"]
+      }
+    },
+    "cache": {
+      "isOnline": true,
+      "extension": {
+        "operationMode": 1,
+        "workMode": 0,
+        "routeState": 0,
+        "position": 99
+      }
+    }
   }
 ]

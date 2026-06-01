@@ -7,7 +7,12 @@ from typing import Any
 from .exceptions import KonkeCommandError
 
 
+ACTION_PAUSE = "Pause"
+ACTION_SET_MODE = "SetMode"
+ACTION_SET_TEMPERATURE = "SetTemperature"
+ACTION_SET_WIND_SPEED = "SetWindSpeed"
 ACTION_TURN_OFF = "TurnOff"
+ACTION_TURN_ON = "TurnOn"
 
 
 def build_device_action_body(
