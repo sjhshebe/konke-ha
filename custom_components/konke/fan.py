@@ -16,8 +16,16 @@ from .command import ACTION_SET_MODE, ACTION_TURN_OFF, ACTION_TURN_ON
 from .const import DOMAIN
 from .coordinator import KonkeDataUpdateCoordinator
 from .entity import KonkeDeviceEntity
-from .models import KonkeDevice, current_state_for_raw, maybe_bool
-from .options import options_from_entry
+from .platform_helpers import (
+    device_base_attributes,
+    device_ids_for_capability,
+    device_name_or_id,
+    device_state,
+    float_from_state,
+    int_from_state,
+    optional_device_state,
+    power_from_state,
+)
 
 ACTION_ADJUST_DOWN_WIND_SPEED = "AdjustDownWindSpeed"
 ACTION_ADJUST_UP_WIND_SPEED = "AdjustUpWindSpeed"
@@ -54,7 +62,7 @@ async def async_setup_entry(
     coordinator: KonkeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
         KonkeFreshAirFan(coordinator, entry, device_id)
-        for device_id in _device_ids_for_capability(
+        for device_id in device_ids_for_capability(
             coordinator,
             entry,
             KonkeCapability.AIR_FRESHER,
@@ -88,8 +96,7 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
     @property
     def name(self) -> str | None:
         """Return the entity name."""
-        device = self.konke_device
-        return None if device else self._device_id
+        return device_name_or_id(self.konke_device, self._device_id)
 
     @property
     def is_on(self) -> bool | None:
@@ -97,7 +104,7 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
         device = self.konke_device
         if device is None:
             return None
-        state_power = _power_from_state(_current_state(device))
+        state_power = power_from_state(device_state(device), "turnOnOff")
         if state_power is not None:
             return state_power
         return device.power_on
@@ -105,7 +112,7 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
     @property
     def percentage(self) -> int | None:
         """Return the current fan speed as a percentage."""
-        speed = _speed_from_state(_current_state_or_empty(self.konke_device))
+        speed = _speed_from_state(optional_device_state(self.konke_device))
         if speed is None:
             return None
         return _SPEED_TO_PERCENTAGE.get(speed)
@@ -113,7 +120,7 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
     @property
     def preset_mode(self) -> str | None:
         """Return the current fresh-air work mode."""
-        mode = _mode_from_state(_current_state_or_empty(self.konke_device))
+        mode = _mode_from_state(optional_device_state(self.konke_device))
         if mode is None:
             return None
         return _KONKE_MODE_TO_PRESET.get(mode)
@@ -124,24 +131,15 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
         device = self.konke_device
         if device is None:
             return {}
-        state = _current_state(device)
+        state = device_state(device)
         return {
-            "user_device_id": device.user_device_id,
-            "room_id": device.room_id,
-            "room_name": device.room_name,
-            "node_id": device.node_id,
-            "parent_user_device_id": device.parent_user_device_id,
-            "cate_type": device.cate_type,
-            "inner_type": device.inner_type,
-            "product_id": device.product_id,
-            "current_temperature": _float_from_state(state, "currentTemperature"),
+            **device_base_attributes(device),
+            "current_temperature": float_from_state(state, "currentTemperature"),
             "konke_work_mode": state.get("workMode"),
             "konke_wind_speed": state.get("windSpeed"),
             "timing_off_time": state.get("timingOffTime"),
             "strainer_work_time": state.get("strainerWorkTime"),
             "strainer_alarm_time": state.get("strainerAlarmTime"),
-            "online": device.online,
-            "power_on": device.power_on,
         }
 
     async def async_turn_on(
@@ -178,7 +176,7 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
         device = self.konke_device
         if device is None:
             raise HomeAssistantError(f"Konke device not found: {self._device_id}")
-        current_speed = _speed_from_state(_current_state(device))
+        current_speed = _speed_from_state(device_state(device))
         if current_speed is None:
             raise HomeAssistantError("Konke fresh-air fan speed is unavailable")
 
@@ -240,7 +238,7 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
         device = self.konke_device
         if device is None:
             return None
-        return _speed_from_state(_current_state(device))
+        return _speed_from_state(device_state(device))
 
     async def _async_wait_for_speed(self, speed: int) -> bool:
         """Wait until the cloud cache reports a wind speed."""
@@ -252,43 +250,6 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
             if self._current_speed() == speed:
                 return True
         return False
-
-
-def _device_ids_for_capability(
-    coordinator: KonkeDataUpdateCoordinator,
-    entry: ConfigEntry,
-    capability: KonkeCapability,
-) -> list[str]:
-    """Return sorted device ids for a capability, honoring offline options."""
-    device_ids = list(
-        coordinator.data.get("device_ids_by_capability", {}).get(capability.value, [])
-    )
-    if options_from_entry(entry).create_offline_device_entities is False:
-        devices_by_id = coordinator.data.get("normalized_devices_by_id", {})
-        device_ids = [
-            device_id
-            for device_id in device_ids
-            if devices_by_id.get(device_id) is not None
-            and devices_by_id[device_id].online is not False
-        ]
-    return sorted(device_ids, key=_sort_device_id)
-
-
-def _current_state_or_empty(device: KonkeDevice | None) -> dict[str, Any]:
-    """Return current state for an optional device."""
-    if device is None:
-        return {}
-    return _current_state(device)
-
-
-def _current_state(device: KonkeDevice) -> dict[str, Any]:
-    """Return the best cached current state payload for a device."""
-    return current_state_for_raw(device.raw)
-
-
-def _power_from_state(state: dict[str, Any]) -> bool | None:
-    """Return cached power state from a current-state payload."""
-    return maybe_bool(state.get("turnOnOff"))
 
 
 def _speed_from_percentage(percentage: int | None) -> int | None:
@@ -304,39 +265,9 @@ def _speed_from_percentage(percentage: int | None) -> int | None:
 
 def _speed_from_state(state: dict[str, Any]) -> int | None:
     """Return normalized Konke wind speed from state."""
-    return _int_from_state(state, "windSpeed")
+    return int_from_state(state, "windSpeed")
 
 
 def _mode_from_state(state: dict[str, Any]) -> int | None:
     """Return normalized Konke work mode from state."""
-    return _int_from_state(state, "workMode")
-
-
-def _int_from_state(state: dict[str, Any], *keys: str) -> int | None:
-    """Return the first integer state value from a set of keys."""
-    for key in keys:
-        value = state.get(key)
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            continue
-    return None
-
-
-def _float_from_state(state: dict[str, Any], *keys: str) -> float | None:
-    """Return the first numeric state value from a set of keys."""
-    for key in keys:
-        value = state.get(key)
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            continue
-    return None
-
-
-def _sort_device_id(device_id: str) -> tuple[int, str]:
-    """Sort numeric ids naturally."""
-    try:
-        return (0, f"{int(device_id):020d}")
-    except (TypeError, ValueError):
-        return (1, str(device_id))
+    return int_from_state(state, "workMode")

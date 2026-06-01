@@ -31,8 +31,15 @@ from .command import (
 from .const import DOMAIN
 from .coordinator import KonkeDataUpdateCoordinator
 from .entity import KonkeDeviceEntity
-from .models import KonkeDevice, current_state_for_raw, maybe_bool
-from .options import options_from_entry
+from .platform_helpers import (
+    device_base_attributes,
+    device_ids_for_capability,
+    device_name_or_id,
+    device_state,
+    float_from_state,
+    int_from_state,
+    power_from_state,
+)
 
 _AIR_CONDITIONER_MODE_TO_HVAC = {
     "COLD": HVACMode.COOL,
@@ -98,13 +105,13 @@ async def async_setup_entry(
     async_add_entities(
         [
             KonkeAirConditionerClimate(coordinator, entry, device_id)
-            for device_id in _device_ids_for_capability(
+            for device_id in device_ids_for_capability(
                 coordinator, entry, KonkeCapability.AIR_CONDITIONER
             )
         ]
         + [
             KonkeFloorHeatingClimate(coordinator, entry, device_id)
-            for device_id in _device_ids_for_capability(
+            for device_id in device_ids_for_capability(
                 coordinator, entry, KonkeCapability.FLOOR_HEATING
             )
         ]
@@ -135,8 +142,7 @@ class KonkeClimateBase(KonkeDeviceEntity, ClimateEntity):
     @property
     def name(self) -> str | None:
         """Return the entity name."""
-        device = self.konke_device
-        return None if device else self._device_id
+        return device_name_or_id(self.konke_device, self._device_id)
 
     @property
     def temperature_unit(self) -> str:
@@ -149,8 +155,8 @@ class KonkeClimateBase(KonkeDeviceEntity, ClimateEntity):
         device = self.konke_device
         if device is None:
             return None
-        return _float_from_state(
-            _current_state(device),
+        return float_from_state(
+            device_state(device),
             "curTemp",
             "currentTemperature",
         )
@@ -161,8 +167,8 @@ class KonkeClimateBase(KonkeDeviceEntity, ClimateEntity):
         device = self.konke_device
         if device is None:
             return None
-        return _float_from_state(
-            _current_state(device),
+        return float_from_state(
+            device_state(device),
             "setTemp",
             "temperature",
         )
@@ -173,21 +179,12 @@ class KonkeClimateBase(KonkeDeviceEntity, ClimateEntity):
         device = self.konke_device
         if device is None:
             return {}
-        state = _current_state(device)
+        state = device_state(device)
         return {
-            "user_device_id": device.user_device_id,
-            "room_id": device.room_id,
-            "room_name": device.room_name,
-            "node_id": device.node_id,
-            "parent_user_device_id": device.parent_user_device_id,
-            "cate_type": device.cate_type,
-            "inner_type": device.inner_type,
-            "product_id": device.product_id,
+            **device_base_attributes(device),
             "konke_mode": state.get("mode"),
             "konke_work_mode": state.get("workMode"),
             "konke_fan_speed": state.get("speed") or state.get("windSpeed"),
-            "online": device.online,
-            "power_on": device.power_on,
         }
 
     async def async_turn_on(self) -> None:
@@ -267,7 +264,7 @@ class KonkeAirConditionerClimate(KonkeClimateBase):
         if device.power_on is False:
             return HVACMode.OFF
 
-        state = _current_state(device)
+        state = device_state(device)
         mode = _air_conditioner_hvac_mode(state)
         if mode is not None:
             return mode
@@ -292,9 +289,8 @@ class KonkeAirConditionerClimate(KonkeClimateBase):
         device = self.konke_device
         if device is None:
             return None
-        raw_speed = _current_state(device).get("speed") or _current_state(device).get(
-            "windSpeed"
-        )
+        state = device_state(device)
+        raw_speed = state.get("speed") or state.get("windSpeed")
         if raw_speed is None:
             return None
         return _AIR_CONDITIONER_FAN_ALIASES.get(str(raw_speed).upper())
@@ -383,8 +379,8 @@ class KonkeFloorHeatingClimate(KonkeClimateBase):
         if device.power_on is False:
             return HVACMode.OFF
 
-        state = _current_state(device)
-        power = _power_from_state(state)
+        state = device_state(device)
+        power = power_from_state(state)
         if power is False:
             return HVACMode.OFF
 
@@ -432,43 +428,9 @@ class KonkeFloorHeatingClimate(KonkeClimateBase):
         )
 
 
-def _device_ids_for_capability(
-    coordinator: KonkeDataUpdateCoordinator,
-    entry: ConfigEntry,
-    capability: KonkeCapability,
-) -> list[str]:
-    """Return sorted device ids for a capability, honoring offline options."""
-    device_ids = list(
-        coordinator.data.get("device_ids_by_capability", {}).get(capability.value, [])
-    )
-    if options_from_entry(entry).create_offline_device_entities is False:
-        devices_by_id = coordinator.data.get("normalized_devices_by_id", {})
-        device_ids = [
-            device_id
-            for device_id in device_ids
-            if devices_by_id.get(device_id) is not None
-            and devices_by_id[device_id].online is not False
-        ]
-    return sorted(device_ids, key=_sort_device_id)
-
-
-def _current_state(device: KonkeDevice) -> dict[str, Any]:
-    """Return the best cached current state payload for a device."""
-    return current_state_for_raw(device.raw)
-
-
-def _power_from_state(state: dict[str, Any]) -> bool | None:
-    """Return cached power state from a current-state payload."""
-    for key in ("on", "turnOnOff"):
-        power = maybe_bool(state.get(key))
-        if power is not None:
-            return power
-    return None
-
-
 def _air_conditioner_hvac_mode(state: dict[str, Any]) -> HVACMode | None:
     """Return a HA HVAC mode from a Konke air-conditioner state payload."""
-    if _power_from_state(state) is False:
+    if power_from_state(state) is False:
         return HVACMode.OFF
 
     raw_mode = state.get("mode")
@@ -477,20 +439,16 @@ def _air_conditioner_hvac_mode(state: dict[str, Any]) -> HVACMode | None:
         if mode is not None:
             return mode
 
-    raw_work_mode = state.get("workMode")
-    try:
-        work_mode = int(raw_work_mode)
-    except (TypeError, ValueError):
+    work_mode = int_from_state(state, "workMode")
+    if work_mode is None:
         return None
     return _AIR_CONDITIONER_WORK_MODE_TO_HVAC.get(work_mode)
 
 
 def _floor_heating_hvac_mode(state: dict[str, Any]) -> HVACMode | None:
     """Return a HA HVAC mode from a Konke floor-heating state payload."""
-    raw_work_mode = state.get("workMode")
-    try:
-        work_mode = int(raw_work_mode)
-    except (TypeError, ValueError):
+    work_mode = int_from_state(state, "workMode")
+    if work_mode is None:
         return None
     return _FLOOR_HEATING_WORK_MODE_TO_HVAC.get(work_mode)
 
@@ -510,22 +468,3 @@ def _hvac_action_from_mode(mode: HVACMode | None) -> HVACAction | None:
     if mode == HVACMode.AUTO:
         return HVACAction.IDLE
     return None
-
-
-def _float_from_state(state: dict[str, Any], *keys: str) -> float | None:
-    """Return the first numeric state value from a set of keys."""
-    for key in keys:
-        value = state.get(key)
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            continue
-    return None
-
-
-def _sort_device_id(device_id: str) -> tuple[int, str]:
-    """Sort numeric ids naturally."""
-    try:
-        return (0, f"{int(device_id):020d}")
-    except (TypeError, ValueError):
-        return (1, str(device_id))

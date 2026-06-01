@@ -18,8 +18,13 @@ from .command import ACTION_PAUSE, ACTION_TURN_OFF, ACTION_TURN_ON
 from .const import DOMAIN
 from .coordinator import KonkeDataUpdateCoordinator
 from .entity import KonkeDeviceEntity
-from .models import KonkeDevice, current_state_for_raw
-from .options import options_from_entry
+from .platform_helpers import (
+    device_base_attributes,
+    device_ids_for_capability,
+    device_name_or_id,
+    device_state,
+    int_from_state,
+)
 
 
 async def async_setup_entry(
@@ -31,7 +36,7 @@ async def async_setup_entry(
     coordinator: KonkeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
         KonkeCurtainCover(coordinator, entry, device_id)
-        for device_id in _device_ids_for_capability(
+        for device_id in device_ids_for_capability(
             coordinator, entry, KonkeCapability.COVER
         )
     )
@@ -60,8 +65,7 @@ class KonkeCurtainCover(KonkeDeviceEntity, CoverEntity):
     @property
     def name(self) -> str | None:
         """Return the entity name."""
-        device = self.konke_device
-        return None if device else self._device_id
+        return device_name_or_id(self.konke_device, self._device_id)
 
     @property
     def current_cover_position(self) -> int | None:
@@ -69,7 +73,7 @@ class KonkeCurtainCover(KonkeDeviceEntity, CoverEntity):
         device = self.konke_device
         if device is None:
             return None
-        position = _int_from_state(_current_state(device), "position")
+        position = int_from_state(device_state(device), "position")
         if position is None:
             return None
         return max(0, min(100, position))
@@ -88,20 +92,12 @@ class KonkeCurtainCover(KonkeDeviceEntity, CoverEntity):
         device = self.konke_device
         if device is None:
             return {}
-        state = _current_state(device)
+        state = device_state(device)
         return {
-            "user_device_id": device.user_device_id,
-            "room_id": device.room_id,
-            "room_name": device.room_name,
-            "node_id": device.node_id,
-            "parent_user_device_id": device.parent_user_device_id,
-            "cate_type": device.cate_type,
-            "inner_type": device.inner_type,
-            "product_id": device.product_id,
+            **device_base_attributes(device, include_power_on=False),
             "konke_operation_mode": state.get("operationMode"),
             "konke_work_mode": state.get("workMode"),
             "konke_route_state": state.get("routeState"),
-            "online": device.online,
         }
 
     async def async_open_cover(self, **kwargs: Any) -> None:
@@ -116,46 +112,3 @@ class KonkeCurtainCover(KonkeDeviceEntity, CoverEntity):
         """Stop the cover."""
         await self.async_control_device(ACTION_PAUSE)
 
-
-def _device_ids_for_capability(
-    coordinator: KonkeDataUpdateCoordinator,
-    entry: ConfigEntry,
-    capability: KonkeCapability,
-) -> list[str]:
-    """Return sorted device ids for a capability, honoring offline options."""
-    device_ids = list(
-        coordinator.data.get("device_ids_by_capability", {}).get(capability.value, [])
-    )
-    if options_from_entry(entry).create_offline_device_entities is False:
-        devices_by_id = coordinator.data.get("normalized_devices_by_id", {})
-        device_ids = [
-            device_id
-            for device_id in device_ids
-            if devices_by_id.get(device_id) is not None
-            and devices_by_id[device_id].online is not False
-        ]
-    return sorted(device_ids, key=_sort_device_id)
-
-
-def _current_state(device: KonkeDevice) -> dict[str, Any]:
-    """Return the best cached current state payload for a device."""
-    return current_state_for_raw(device.raw)
-
-
-def _int_from_state(state: dict[str, Any], *keys: str) -> int | None:
-    """Return the first integer state value from a set of keys."""
-    for key in keys:
-        value = state.get(key)
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            continue
-    return None
-
-
-def _sort_device_id(device_id: str) -> tuple[int, str]:
-    """Sort numeric ids naturally."""
-    try:
-        return (0, f"{int(device_id):020d}")
-    except (TypeError, ValueError):
-        return (1, str(device_id))
