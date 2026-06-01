@@ -22,7 +22,16 @@ Home Assistant Core。
 wget -q -T 30 -t 3 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh -O /tmp/konke-install.sh && sh /tmp/konke-install.sh
 ```
 
-### 方式二：一键更新
+### 方式二：手动安装
+
+1. 将本目录里的 `custom_components/konke` 复制到 Home Assistant 的 `/config/custom_components/konke`。
+2. 重启 Home Assistant。
+3. 进入 `设置 -> 设备与服务 -> 添加集成`，搜索 `控客智能` 或 `Konke Smart`。
+4. 选择 `手机号和密码` 登录，填写控客账号手机号和密码；集成会自动登录控客接口，并保存后续请求需要的 token。
+
+## 更新
+
+### 方式一：一键更新
 
 以后更新到最新稳定版本时，在 Home Assistant 的 Terminal / SSH 中运行：
 
@@ -39,12 +48,11 @@ wget -q -T 30 -t 3 https://raw.githubusercontent.com/sjhshebe/konke-homeassistan
 更新脚本会复用安装脚本的逻辑，自动备份旧版本、覆盖安装最新版本，并重启
 Home Assistant Core。
 
-### 方式三：手动安装
+### 方式二：手动更新
 
-1. 将本目录里的 `custom_components/konke` 复制到 Home Assistant 的 `/config/custom_components/konke`。
-2. 重启 Home Assistant。
-3. 进入 `设置 -> 设备与服务 -> 添加集成`，搜索 `控客智能` 或 `Konke Smart`。
-4. 选择 `手机号和密码` 登录，填写控客账号手机号和密码；集成会自动登录控客接口，并保存后续请求需要的 token。
+1. 下载最新版本源码。
+2. 用新的 `custom_components/konke` 覆盖 Home Assistant 的 `/config/custom_components/konke`。
+3. 重启 Home Assistant。
 
 ## 已确认接口
 
