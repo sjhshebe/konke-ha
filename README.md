@@ -22,7 +22,24 @@ Home Assistant Core。
 wget -qO- https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh | sh
 ```
 
-### 方式二：手动安装
+### 方式二：一键更新
+
+以后更新到最新稳定版本时，在 Home Assistant 的 Terminal / SSH 中运行：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh | sh
+```
+
+如果你的环境没有 `curl`，也可以使用：
+
+```bash
+wget -qO- https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh | sh
+```
+
+更新脚本会复用安装脚本的逻辑，自动备份旧版本、覆盖安装最新版本，并重启
+Home Assistant Core。
+
+### 方式三：手动安装
 
 1. 将本目录里的 `custom_components/konke` 复制到 Home Assistant 的 `/config/custom_components/konke`。
 2. 重启 Home Assistant。
