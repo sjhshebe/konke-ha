@@ -95,7 +95,7 @@ wget -q -T 30 -t 3 https://raw.githubusercontent.com/sjhshebe/konke-homeassistan
 控客普通场景会同步为 HA `scene` 实体。控客 App 内部生成的多控分组
 场景，例如 `空调多控`、`新风多控`，不会从云端场景同步请求中读取，也不
 会创建为 HA 实体；这些分组更像控客内部设备关系说明，日常自动化应直接
-使用对应的 `climate`、`cover` 等标准实体。
+使用对应的 `climate`、`cover`、`fan` 等标准实体。
 
 ### 空调
 
@@ -139,7 +139,18 @@ wget -q -T 30 -t 3 https://raw.githubusercontent.com/sjhshebe/konke-homeassistan
 
 ### 新风
 
-新风设备目前只完成了设备识别和只读状态分析，尚未暴露为可控制 HA 实体。原因是抓包只确认了一次 `TurnOn`，还没有确认 `TurnOff`、调风速和调模式的完整控制与恢复路径。
+控客新风会同步为 HA `fan` 实体。当前已实现：
+
+- 在线/离线状态
+- 当前开关状态
+- 当前温度展示
+- 当前风速展示
+- 当前模式展示
+- `fan.turn_on`
+- `fan.turn_off`
+- 设置风速：1、2、3 档
+- 设置预设模式：自动、手动
+- 滤网工作时间和告警时间等状态属性
 
 ## 选项
 

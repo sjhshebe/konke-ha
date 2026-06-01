@@ -6,7 +6,12 @@ from homeassistant.const import Platform
 
 DOMAIN = "konke"
 
-PLATFORMS: list[Platform] = [Platform.SCENE, Platform.CLIMATE, Platform.COVER]
+PLATFORMS: list[Platform] = [
+    Platform.SCENE,
+    Platform.CLIMATE,
+    Platform.COVER,
+    Platform.FAN,
+]
 
 AUTH_METHOD_TOKEN = "token"
 AUTH_METHOD_PASSWORD = "password"

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 import types
-from enum import Enum
+from enum import Enum, IntFlag
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -212,3 +212,25 @@ class _Scene:
 
 
 homeassistant.components.scene.Scene = _Scene
+
+homeassistant.components.fan = sys.modules.setdefault(
+    "homeassistant.components.fan",
+    types.ModuleType("homeassistant.components.fan"),
+)
+
+
+class _FanEntityFeature(IntFlag):
+    SET_SPEED = 1
+    OSCILLATE = 2
+    DIRECTION = 4
+    PRESET_MODE = 8
+    TURN_OFF = 16
+    TURN_ON = 32
+
+
+class _FanEntity:
+    pass
+
+
+homeassistant.components.fan.FanEntity = _FanEntity
+homeassistant.components.fan.FanEntityFeature = _FanEntityFeature

@@ -59,7 +59,7 @@ class ModelTest(unittest.TestCase):
 
         self.assertEqual(
             sorted(indexes["devices_by_id"]),
-            ["1001", "2001", "3001", "4001"],
+            ["1001", "2001", "3001", "4001", "5001"],
         )
         self.assertEqual(
             indexes["device_ids_by_capability"][KonkeCapability.AIR_CONDITIONER.value],
@@ -72,6 +72,10 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(
             indexes["device_ids_by_capability"][KonkeCapability.COVER.value],
             ["4001"],
+        )
+        self.assertEqual(
+            indexes["device_ids_by_capability"][KonkeCapability.AIR_FRESHER.value],
+            ["5001"],
         )
         self.assertEqual(
             indexes["device_ids_by_capability"][KonkeCapability.SWITCH.value],
@@ -87,6 +91,38 @@ class ModelTest(unittest.TestCase):
                 ("2001", "switch", "switch"),
                 ("3001", KonkeCapability.FLOOR_HEATING.value, "climate"),
                 ("4001", "cover", "cover"),
+                ("5001", KonkeCapability.AIR_FRESHER.value, "fan"),
+            },
+        )
+
+    def test_fresh_air_model_has_state_and_fan_entity(self) -> None:
+        """Fresh-air fixtures produce stable fan capability fields."""
+        device = KonkeDevice.from_raw(load_devices()[4])
+
+        self.assertEqual(device.user_device_id, "5001")
+        self.assertEqual(device.name, "新风")
+        self.assertIs(device.online, True)
+        self.assertIs(device.power_on, True)
+        self.assertIn(KonkeCapability.AIR_FRESHER, device.capabilities)
+        self.assertGreaterEqual(
+            {command.action_name for command in device.commands},
+            {
+                "TurnOn",
+                "TurnOff",
+                "SetMode",
+                "AdjustDownWindSpeed",
+                "AdjustUpWindSpeed",
+            },
+        )
+        self.assertGreaterEqual(
+            {prop.key for prop in device.properties},
+            {
+                "turnOnOff",
+                "currentTemperature",
+                "workMode",
+                "windSpeed",
+                "strainerWorkTime",
+                "strainerAlarmTime",
             },
         )
 

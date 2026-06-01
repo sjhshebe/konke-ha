@@ -92,12 +92,27 @@ Do not paste raw captures, tokens, phone numbers, passwords, or home addresses h
     `temperature`, `timingOffTime`, `nodeId`, `innerType`, `cateType`,
     `userExtension`, `isOnline`.
   - implemented by `command.py`, `api.py`, and the HA `climate` platform.
-- Fresh-air read-only shape:
-  - device type observed: `virtual_AF_3in1_mix` / `air_fresher_panel` /
+- Fresh-air actions for `virtual_AF_3in1_mix` nodes:
+  - endpoint: `POST /api/device/action/control`
+  - device type validated: `virtual_AF_3in1_mix` / `air_fresher_panel` /
     `AirFresher`
+  - power on body shape: `{"userDeviceId": <int>, "name": "TurnOn"}`
+  - power off body shape: `{"userDeviceId": <int>, "name": "TurnOff"}`
+  - mode body shape:
+    `{"userDeviceId": <int>, "name": "SetMode", "extension": {"mode": <int>}}`
+  - observed mode values: `0` = `Auto`, `1` = `Manual`
+  - direct wind-speed body shape observed but not effective:
+    `{"userDeviceId": <int>, "name": "SetWindSpeed", "extension": {"speed": <int>}}`
+  - direct `SetWindSpeed` returned `SUCCESS` during validation but did not
+    change the cached `windSpeed`, so it must not be used for HA speed setting.
+  - wind speed is controlled with relative actions:
+    `{"userDeviceId": <int>, "name": "AdjustDownWindSpeed"}` and
+    `{"userDeviceId": <int>, "name": "AdjustUpWindSpeed"}`.
+  - observed wind-speed values: `1`, `2`, `3`.
   - cache fields observed: `turnOnOff`, `currentTemperature`, `workMode`,
     `timingOffTime`, `windSpeed`, `strainerWorkTime`, `strainerAlarmTime`,
     `nodeId`, `innerType`, `cateType`, `userExtension`, `isOnline`.
+  - implemented by `command.py`, `api.py`, and the HA `fan` platform.
 
 ## Not Yet Confirmed
 
@@ -105,9 +120,6 @@ These items must not be exposed as Home Assistant supported features until captu
 documented, and tested:
 
 - Air-conditioner actions for `virtual_AC_3in1_mix#2` wire-controller devices.
-- Fresh-air `TurnOff`, `SetWindSpeed`, and `SetMode` payloads. A `TurnOn`
-  payload has been observed, but the matching off/restore path was not
-  confirmed and must not be exposed yet.
 - Curtain position-set payloads.
 - Light brightness, color temperature, and RGB payloads.
 - Generic switch payloads beyond advertised `TurnOn`/`TurnOff`.
@@ -197,6 +209,26 @@ Reason: those actions change real device state and need an explicit test window.
   - `SetMode`
 - Reason: the test device remained reported as `turnOnOff=true` after the
   attempted toggle, so the off path was not validated.
+
+### 2026-06-02 HA-side Fresh-Air Control Validation
+
+- Validation script: retained locally outside this repository.
+- Device type validated: `virtual_AF_3in1_mix` / `air_fresher_panel` /
+  `AirFresher`.
+- Test device was online and originally `on`, `windSpeed=3`, `workMode=1`.
+- HA-side validated:
+  - `TurnOff`
+  - `TurnOn` restore
+  - `SetMode` to `0`
+  - `SetMode` back to `1`
+  - `AdjustDownWindSpeed` from `3` to `2`
+  - `AdjustDownWindSpeed` from `2` to `1`
+  - `AdjustUpWindSpeed` from `1` to `2`
+  - `AdjustUpWindSpeed` from `2` back to `3`
+- Also tested but not accepted:
+  - `SetWindSpeed` with `{"speed": 2}` returned `SUCCESS` but the cached
+    `windSpeed` remained `3`.
+- Post-test state was verified back at `on`, `windSpeed=3`, `Manual`.
 
 ## Capture Checklist
 

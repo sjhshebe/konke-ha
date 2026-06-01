@@ -98,5 +98,56 @@
         "position": 99
       }
     }
+  },
+  {
+    "userDeviceId": "5001",
+    "deviceName": "新风",
+    "roomId": "room-living",
+    "roomName": "客厅",
+    "areaId": "area-main",
+    "areaName": "默认区域",
+    "parentUserDeviceId": "5000",
+    "nodeId": "3",
+    "device": {
+      "cateType": "AirFresher",
+      "deviceType": {
+        "cateType": "AirFresher",
+        "innerType": "air_fresher_panel",
+        "productId": "virtual_AF_3in1_mix",
+        "typeName": "新风",
+        "actionList": [
+          "TurnOnOff",
+          "TurnOn",
+          "TurnOff",
+          "SetWindSpeed",
+          "SetMode",
+          "AdjustDownWindSpeed",
+          "AdjustUpWindSpeed"
+        ]
+      }
+    },
+    "cache": {
+      "isOnline": true,
+      "extension": {
+        "turnOnOff": true,
+        "currentTemperature": 31,
+        "workMode": 1,
+        "timingOffTime": "00:00",
+        "windSpeed": 3,
+        "nodeId": "3",
+        "strainerWorkTime": 8541,
+        "strainerAlarmTime": 9000,
+        "current": {
+          "turnOnOff": true,
+          "currentTemperature": 31,
+          "workMode": 1,
+          "timingOffTime": "00:00",
+          "windSpeed": 3,
+          "nodeId": "3",
+          "strainerWorkTime": 8541,
+          "strainerAlarmTime": 9000
+        }
+      }
+    }
   }
 ]
