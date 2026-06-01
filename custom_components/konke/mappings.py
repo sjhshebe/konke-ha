@@ -8,8 +8,8 @@ from typing import Any
 
 from homeassistant.const import Platform
 
-from .air_conditioner import is_air_conditioner
 from .capabilities import KonkeCapability
+from .device_profiles import DEVICE_PROFILES
 from .models import capabilities_for_raw_device
 
 
@@ -28,31 +28,26 @@ class KonkeDeviceMapping:
     is_match: Callable[[Mapping[str, Any]], bool]
 
 
+def _profile_mappings() -> tuple[KonkeDeviceMapping, ...]:
+    """Return platform mappings for verified device profiles."""
+    mappings: list[KonkeDeviceMapping] = []
+    for profile in DEVICE_PROFILES:
+        if profile.platform is None:
+            continue
+        capability = KonkeCapability(profile.capability)
+        mappings.append(
+            KonkeDeviceMapping(
+                key=profile.key,
+                platform=profile.platform,
+                capability=capability,
+                is_match=has_capability(capability),
+            )
+        )
+    return tuple(mappings)
+
+
 DEVICE_MAPPINGS: tuple[KonkeDeviceMapping, ...] = (
-    KonkeDeviceMapping(
-        key="air_conditioner",
-        platform=Platform.CLIMATE,
-        capability=KonkeCapability.AIR_CONDITIONER,
-        is_match=is_air_conditioner,
-    ),
-    KonkeDeviceMapping(
-        key="floor_heating",
-        platform=Platform.CLIMATE,
-        capability=KonkeCapability.FLOOR_HEATING,
-        is_match=has_capability(KonkeCapability.FLOOR_HEATING),
-    ),
-    KonkeDeviceMapping(
-        key="air_fresher",
-        platform=Platform.FAN,
-        capability=KonkeCapability.AIR_FRESHER,
-        is_match=has_capability(KonkeCapability.AIR_FRESHER),
-    ),
-    KonkeDeviceMapping(
-        key="cover",
-        platform=Platform.COVER,
-        capability=KonkeCapability.COVER,
-        is_match=has_capability(KonkeCapability.COVER),
-    ),
+    *_profile_mappings(),
     KonkeDeviceMapping(
         key="switch",
         platform=Platform.SWITCH,

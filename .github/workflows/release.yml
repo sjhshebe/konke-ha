@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release tag, for example v0.6.0"
+        description: "Release tag, for example v0.7.0"
         required: true
         type: string
 
@@ -48,7 +48,7 @@ jobs:
 
           tag = sys.argv[1]
           if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
-              print(f"::error::Release tag must look like v0.6.0, got {tag!r}")
+              print(f"::error::Release tag must look like v0.7.0, got {tag!r}")
               raise SystemExit(1)
 
           manifest = json.loads(Path("custom_components/konke/manifest.json").read_text())
@@ -65,8 +65,11 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-test.txt
+
       - name: Run unit tests
-        run: python -m unittest discover -s tests
+        run: python -m pytest tests/components/konke
 
       - name: Compile integration
         run: python -m compileall -q custom_components/konke

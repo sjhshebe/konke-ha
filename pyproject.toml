@@ -1,5 +1,5 @@
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests/components/konke"]
 pythonpath = ["."]
 addopts = "-q"
 

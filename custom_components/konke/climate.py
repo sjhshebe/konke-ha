@@ -30,6 +30,15 @@ from .command import (
 )
 from .const import DOMAIN
 from .coordinator import KonkeDataUpdateCoordinator
+from .device_profiles import (
+    AIR_CONDITIONER_FAN_ALIASES,
+    AIR_CONDITIONER_FAN_KEY_TO_KONKE,
+    AIR_CONDITIONER_HVAC_KEY_TO_MODE,
+    AIR_CONDITIONER_MODE_TO_HVAC_KEY,
+    AIR_CONDITIONER_WORK_MODE_TO_HVAC_KEY,
+    FLOOR_HEATING_HVAC_KEY_TO_MODE,
+    FLOOR_HEATING_WORK_MODE_TO_HVAC_KEY,
+)
 from .entity import KonkeDeviceEntity
 from .platform_helpers import (
     device_base_attributes,
@@ -41,58 +50,25 @@ from .platform_helpers import (
     power_from_state,
 )
 
-_AIR_CONDITIONER_MODE_TO_HVAC = {
-    "COLD": HVACMode.COOL,
-    "COOL": HVACMode.COOL,
-    "DEHUM": HVACMode.DRY,
-    "DRY": HVACMode.DRY,
-    "HEAT": HVACMode.HEAT,
-    "HOT": HVACMode.HEAT,
-    "WARM": HVACMode.HEAT,
-    "WIND": HVACMode.FAN_ONLY,
-    "FAN": HVACMode.FAN_ONLY,
-}
-
-_AIR_CONDITIONER_WORK_MODE_TO_HVAC = {
-    1: HVACMode.COOL,
-    2: HVACMode.HEAT,
-    3: HVACMode.FAN_ONLY,
-    4: HVACMode.DRY,
-}
-
-_AIR_CONDITIONER_HVAC_TO_MODE = {
-    HVACMode.COOL: "COLD",
-    HVACMode.HEAT: "HOT",
-    HVACMode.FAN_ONLY: "WIND",
-    HVACMode.DRY: "DEHUM",
-}
-
 _AIR_CONDITIONER_FAN_MODES = [FAN_AUTO, FAN_LOW, FAN_MEDIUM, FAN_HIGH]
-_AIR_CONDITIONER_FAN_ALIASES = {
-    "AUTO": FAN_AUTO,
-    "HIGH": FAN_HIGH,
-    "LOW": FAN_LOW,
-    "MED": FAN_MEDIUM,
-    "MIDDLE": FAN_MEDIUM,
-    "MID": FAN_MEDIUM,
-    "MEDIUM": FAN_MEDIUM,
+_HVAC_BY_KEY = {
+    "auto": HVACMode.AUTO,
+    "cool": HVACMode.COOL,
+    "dry": HVACMode.DRY,
+    "fan_only": HVACMode.FAN_ONLY,
+    "heat": HVACMode.HEAT,
 }
-_AIR_CONDITIONER_FAN_TO_KONKE = {
-    FAN_AUTO: "AUTO",
-    FAN_HIGH: "HIGH",
-    FAN_LOW: "LOW",
-    FAN_MEDIUM: "MEDIUM",
+_HVAC_KEY_BY_MODE = {
+    value: key
+    for key, value in _HVAC_BY_KEY.items()
 }
-
-_FLOOR_HEATING_WORK_MODE_TO_HVAC = {
-    0: HVACMode.AUTO,
-    1: HVACMode.HEAT,
+_FAN_BY_KEY = {
+    "auto": FAN_AUTO,
+    "high": FAN_HIGH,
+    "low": FAN_LOW,
+    "medium": FAN_MEDIUM,
 }
-
-_FLOOR_HEATING_HVAC_TO_MODE = {
-    HVACMode.AUTO: 0,
-    HVACMode.HEAT: 1,
-}
+_FAN_KEY_BY_MODE = {value: key for key, value in _FAN_BY_KEY.items()}
 
 
 async def async_setup_entry(
@@ -293,7 +269,10 @@ class KonkeAirConditionerClimate(KonkeClimateBase):
         raw_speed = state.get("speed") or state.get("windSpeed")
         if raw_speed is None:
             return None
-        return _AIR_CONDITIONER_FAN_ALIASES.get(str(raw_speed).upper())
+        fan_key = AIR_CONDITIONER_FAN_ALIASES.get(str(raw_speed).upper())
+        if fan_key is None:
+            return None
+        return _FAN_BY_KEY.get(fan_key)
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set target temperature."""
@@ -305,8 +284,9 @@ class KonkeAirConditionerClimate(KonkeClimateBase):
             await self.async_turn_off()
             return
 
-        konke_mode = _AIR_CONDITIONER_HVAC_TO_MODE.get(hvac_mode)
-        if konke_mode is None:
+        hvac_key = _HVAC_KEY_BY_MODE.get(hvac_mode)
+        konke_mode = AIR_CONDITIONER_HVAC_KEY_TO_MODE.get(hvac_key or "")
+        if hvac_key is None or konke_mode is None:
             raise HomeAssistantError(
                 f"Konke air conditioner does not support HVAC mode: {hvac_mode}"
             )
@@ -320,14 +300,17 @@ class KonkeAirConditionerClimate(KonkeClimateBase):
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set fan mode."""
-        normalized = _AIR_CONDITIONER_FAN_ALIASES.get(str(fan_mode).upper())
+        fan_key = _FAN_KEY_BY_MODE.get(str(fan_mode))
+        fan_key = AIR_CONDITIONER_FAN_ALIASES.get(str(fan_mode).upper(), fan_key)
+        normalized = _FAN_BY_KEY.get(fan_key or "")
         if normalized not in _AIR_CONDITIONER_FAN_MODES:
             raise HomeAssistantError(
                 f"Konke air conditioner does not support fan mode: {fan_mode}"
             )
+        normalized_key = _FAN_KEY_BY_MODE[normalized]
         await self.async_control_device(
             ACTION_SET_WIND_SPEED,
-            extension={"speed": _AIR_CONDITIONER_FAN_TO_KONKE[normalized]},
+            extension={"speed": AIR_CONDITIONER_FAN_KEY_TO_KONKE[normalized_key]},
         )
 
 
@@ -414,8 +397,9 @@ class KonkeFloorHeatingClimate(KonkeClimateBase):
             await self.async_turn_off()
             return
 
-        konke_mode = _FLOOR_HEATING_HVAC_TO_MODE.get(hvac_mode)
-        if konke_mode is None:
+        hvac_key = _HVAC_KEY_BY_MODE.get(hvac_mode)
+        konke_mode = FLOOR_HEATING_HVAC_KEY_TO_MODE.get(hvac_key or "")
+        if hvac_key is None or konke_mode is None:
             raise HomeAssistantError(
                 f"Konke floor heating does not support HVAC mode: {hvac_mode}"
             )
@@ -435,14 +419,17 @@ def _air_conditioner_hvac_mode(state: dict[str, Any]) -> HVACMode | None:
 
     raw_mode = state.get("mode")
     if raw_mode is not None:
-        mode = _AIR_CONDITIONER_MODE_TO_HVAC.get(str(raw_mode).upper())
-        if mode is not None:
-            return mode
+        key = AIR_CONDITIONER_MODE_TO_HVAC_KEY.get(str(raw_mode).upper())
+        if key is not None:
+            return _HVAC_BY_KEY.get(key)
 
     work_mode = int_from_state(state, "workMode")
     if work_mode is None:
         return None
-    return _AIR_CONDITIONER_WORK_MODE_TO_HVAC.get(work_mode)
+    key = AIR_CONDITIONER_WORK_MODE_TO_HVAC_KEY.get(work_mode)
+    if key is None:
+        return None
+    return _HVAC_BY_KEY.get(key)
 
 
 def _floor_heating_hvac_mode(state: dict[str, Any]) -> HVACMode | None:
@@ -450,7 +437,10 @@ def _floor_heating_hvac_mode(state: dict[str, Any]) -> HVACMode | None:
     work_mode = int_from_state(state, "workMode")
     if work_mode is None:
         return None
-    return _FLOOR_HEATING_WORK_MODE_TO_HVAC.get(work_mode)
+    key = FLOOR_HEATING_WORK_MODE_TO_HVAC_KEY.get(work_mode)
+    if key is None:
+        return None
+    return _HVAC_BY_KEY.get(key)
 
 
 def _hvac_action_from_mode(mode: HVACMode | None) -> HVACAction | None:

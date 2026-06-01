@@ -66,18 +66,18 @@
     }
   },
   "services": {
-      "execute_scene": {
-        "name": "Execute scene",
-        "description": "Execute a Konke Smart scene by scene ID.",
-        "fields": {
-          "scene_id": {
-            "name": "Scene ID",
+    "execute_scene": {
+      "name": "Execute scene",
+      "description": "Execute a Konke Smart scene by scene ID.",
+      "fields": {
+        "scene_id": {
+          "name": "Scene ID",
           "description": "Konke sceneId, for example 123456."
         },
         "entry_id": {
           "name": "Entry ID",
-            "description": "Optional config entry ID when multiple Konke accounts are configured."
-          }
+          "description": "Optional config entry ID when multiple Konke accounts are configured."
+        }
       }
     },
     "refresh": {
@@ -115,78 +115,6 @@
           "description": "Optional extra fields merged into the command body."
         }
       }
-    },
-    "list_air_conditioners": {
-        "name": "List air conditioners",
-        "description": "List Konke air conditioner devices matching the room filters.",
-        "fields": {
-          "entry_id": {
-            "name": "Entry ID",
-            "description": "Optional Home Assistant config entry ID. Only needed when multiple Konke accounts are configured."
-          },
-          "include_room_names": {
-            "name": "Include room names",
-            "description": "Only include air conditioners in these room names."
-          },
-          "exclude_room_names": {
-            "name": "Exclude room names",
-            "description": "Exclude air conditioners in these room names."
-          },
-          "include_room_ids": {
-            "name": "Include room IDs",
-            "description": "Only include air conditioners in these Konke room IDs."
-          },
-          "exclude_room_ids": {
-            "name": "Exclude room IDs",
-            "description": "Exclude air conditioners in these Konke room IDs."
-          },
-          "include_offline": {
-            "name": "Include offline devices",
-            "description": "Include devices reported offline by Konke."
-          },
-          "only_on": {
-            "name": "Only powered-on devices",
-            "description": "Only include devices whose cached power state is on."
-          }
-        }
-      },
-      "turn_off_air_conditioners": {
-        "name": "Turn off air conditioners",
-        "description": "Turn off Konke air conditioners matching the room filters.",
-        "fields": {
-          "entry_id": {
-            "name": "Entry ID",
-            "description": "Optional Home Assistant config entry ID. Only needed when multiple Konke accounts are configured."
-          },
-          "include_room_names": {
-            "name": "Include room names",
-            "description": "Only turn off air conditioners in these room names."
-          },
-          "exclude_room_names": {
-            "name": "Exclude room names",
-            "description": "Exclude air conditioners in these room names."
-          },
-          "include_room_ids": {
-            "name": "Include room IDs",
-            "description": "Only turn off air conditioners in these Konke room IDs."
-          },
-          "exclude_room_ids": {
-            "name": "Exclude room IDs",
-            "description": "Exclude air conditioners in these Konke room IDs."
-          },
-          "include_offline": {
-            "name": "Include offline devices",
-            "description": "Include devices reported offline by Konke."
-          },
-          "only_on": {
-            "name": "Only powered-on devices",
-            "description": "Only send turn-off commands to devices whose cached power state is on."
-          },
-          "dry_run": {
-            "name": "Dry run",
-            "description": "Return matching devices without sending control commands."
-          }
-        }
-      }
     }
   }
+}

@@ -37,14 +37,3 @@ def build_device_action_body(
     if extra:
         body.update(extra)
     return body
-
-
-def air_conditioner_turn_off_action(device: dict[str, Any]) -> tuple[int, str]:
-    """Return action details for turning off an air conditioner."""
-    user_device_id = device.get("userDeviceId")
-    if user_device_id is None:
-        raise KonkeCommandError("Air conditioner device missing userDeviceId")
-    try:
-        return int(user_device_id), ACTION_TURN_OFF
-    except (TypeError, ValueError) as err:
-        raise KonkeCommandError("Air conditioner userDeviceId is not numeric") from err

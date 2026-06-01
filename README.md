@@ -19,7 +19,7 @@ Core。
 安装指定版本时设置 `KONKE_VERSION`：
 
 ```bash
-curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh -o /tmp/konke-install.sh && KONKE_VERSION=v0.6.0 sh /tmp/konke-install.sh
+curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh -o /tmp/konke-install.sh && KONKE_VERSION=v0.7.0 sh /tmp/konke-install.sh
 ```
 
 如果你的环境没有 `curl`，也可以使用：
@@ -49,7 +49,7 @@ curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --ht
 更新到指定版本时设置 `KONKE_VERSION`：
 
 ```bash
-curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh -o /tmp/konke-update.sh && KONKE_VERSION=v0.6.0 sh /tmp/konke-update.sh
+curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh -o /tmp/konke-update.sh && KONKE_VERSION=v0.7.0 sh /tmp/konke-update.sh
 ```
 
 如果你的环境没有 `curl`，也可以使用：
@@ -183,40 +183,6 @@ service: konke.refresh
 ```
 
 如果 HA 里配置了多个控客账号，可以加 `entry_id` 指定配置项。
-
-### 空调设备
-
-当前版本还提供空调设备筛选和关机服务，用于按房间排除或包含设备的自动化。
-
-先试运行，确认会匹配哪些设备：
-
-```yaml
-service: konke.turn_off_air_conditioners
-data:
-  exclude_room_names:
-    - <排除房间名>
-  only_on: true
-  dry_run: true
-```
-
-确认列表正确后再实际执行：
-
-```yaml
-service: konke.turn_off_air_conditioners
-data:
-  exclude_room_names:
-    - <排除房间名>
-  only_on: true
-```
-
-也可以只列出设备，不发送控制命令：
-
-```yaml
-service: konke.list_air_conditioners
-data:
-  exclude_room_names:
-    - <排除房间名>
-```
 
 ## 注意
 

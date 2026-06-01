@@ -16,7 +16,6 @@ from .command import (
     ACTION_SET_WIND_SPEED,
     ACTION_TURN_OFF,
     ACTION_TURN_ON,
-    air_conditioner_turn_off_action,
     build_device_action_body,
 )
 from .profile import (
@@ -365,20 +364,6 @@ class KonkeApiClient:
             "/device/action/control",
             home_id=home_id,
             json_body=body,
-        )
-
-    async def turn_off_air_conditioner(
-        self,
-        *,
-        home_id: str | int,
-        device: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Turn off a Konke air conditioner device."""
-        user_device_id, action_name = air_conditioner_turn_off_action(device)
-        return await self.control_device(
-            home_id=home_id,
-            user_device_id=user_device_id,
-            action_name=action_name,
         )
 
     async def turn_on_device(

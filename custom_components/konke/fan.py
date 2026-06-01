@@ -15,6 +15,13 @@ from .capabilities import KonkeCapability
 from .command import ACTION_SET_MODE, ACTION_TURN_OFF, ACTION_TURN_ON
 from .const import DOMAIN
 from .coordinator import KonkeDataUpdateCoordinator
+from .device_profiles import (
+    FRESH_AIR_KONKE_MODE_TO_PRESET,
+    FRESH_AIR_PERCENTAGE_TO_SPEED,
+    FRESH_AIR_PRESET_TO_KONKE,
+    FRESH_AIR_SPEED_RANGE,
+    FRESH_AIR_SPEED_TO_PERCENTAGE,
+)
 from .entity import KonkeDeviceEntity
 from .platform_helpers import (
     device_base_attributes,
@@ -30,27 +37,8 @@ from .platform_helpers import (
 ACTION_ADJUST_DOWN_WIND_SPEED = "AdjustDownWindSpeed"
 ACTION_ADJUST_UP_WIND_SPEED = "AdjustUpWindSpeed"
 
-_SPEED_RANGE = range(1, 4)
 _SPEED_REFRESH_ATTEMPTS = 5
 _SPEED_REFRESH_DELAY = 1
-_PERCENTAGE_TO_SPEED = {
-    33: 1,
-    66: 2,
-    100: 3,
-}
-_SPEED_TO_PERCENTAGE = {
-    1: 33,
-    2: 66,
-    3: 100,
-}
-_PRESET_MODE_TO_KONKE = {
-    "auto": 0,
-    "manual": 1,
-}
-_KONKE_MODE_TO_PRESET = {
-    0: "auto",
-    1: "manual",
-}
 
 
 async def async_setup_entry(
@@ -74,8 +62,8 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
     """Representation of a Konke fresh-air device."""
 
     _attr_icon = "mdi:air-filter"
-    _attr_preset_modes = list(_PRESET_MODE_TO_KONKE)
-    _attr_speed_count = len(_SPEED_RANGE)
+    _attr_preset_modes = list(FRESH_AIR_PRESET_TO_KONKE)
+    _attr_speed_count = len(FRESH_AIR_SPEED_RANGE)
     _attr_supported_features = (
         FanEntityFeature.TURN_ON
         | FanEntityFeature.TURN_OFF
@@ -115,7 +103,7 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
         speed = _speed_from_state(optional_device_state(self.konke_device))
         if speed is None:
             return None
-        return _SPEED_TO_PERCENTAGE.get(speed)
+        return FRESH_AIR_SPEED_TO_PERCENTAGE.get(speed)
 
     @property
     def preset_mode(self) -> str | None:
@@ -123,7 +111,7 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
         mode = _mode_from_state(optional_device_state(self.konke_device))
         if mode is None:
             return None
-        return _KONKE_MODE_TO_PRESET.get(mode)
+        return FRESH_AIR_KONKE_MODE_TO_PRESET.get(mode)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -188,7 +176,7 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
         if current_speed == target_speed:
             return
 
-        for _ in range(len(_SPEED_RANGE) - 1):
+        for _ in range(len(FRESH_AIR_SPEED_RANGE) - 1):
             current_speed = self._current_speed()
             if current_speed is None:
                 raise HomeAssistantError("Konke fresh-air fan speed is unavailable")
@@ -220,7 +208,7 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set fresh-air work mode."""
-        mode = _PRESET_MODE_TO_KONKE.get(str(preset_mode).lower())
+        mode = FRESH_AIR_PRESET_TO_KONKE.get(str(preset_mode).lower())
         if mode is None:
             raise HomeAssistantError(
                 f"Konke fresh-air fan does not support preset mode: {preset_mode}"
@@ -257,10 +245,10 @@ def _speed_from_percentage(percentage: int | None) -> int | None:
     if percentage is None or percentage <= 0:
         return None
     closest_percentage = min(
-        _PERCENTAGE_TO_SPEED,
+        FRESH_AIR_PERCENTAGE_TO_SPEED,
         key=lambda item: abs(item - percentage),
     )
-    return _PERCENTAGE_TO_SPEED[closest_percentage]
+    return FRESH_AIR_PERCENTAGE_TO_SPEED[closest_percentage]
 
 
 def _speed_from_state(state: dict[str, Any]) -> int | None:

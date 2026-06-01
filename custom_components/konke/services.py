@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 import voluptuous as vol
@@ -11,58 +10,27 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
-from .air_conditioner import filter_air_conditioners, summarize_air_conditioner
 from .const import (
-    ATTR_DRY_RUN,
     ATTR_ENTRY_ID,
-    ATTR_EXCLUDE_ROOM_IDS,
-    ATTR_EXCLUDE_ROOM_NAMES,
     ATTR_ACTION_NAME,
     ATTR_EXTENSION,
     ATTR_EXTRA,
-    ATTR_INCLUDE_OFFLINE,
-    ATTR_INCLUDE_ROOM_IDS,
-    ATTR_INCLUDE_ROOM_NAMES,
-    ATTR_ONLY_ON,
     ATTR_SCENE_ID,
     ATTR_USER_DEVICE_ID,
     CONF_HOME_ID,
     DOMAIN,
     SERVICE_EXECUTE_SCENE,
-    SERVICE_LIST_AIR_CONDITIONERS,
     SERVICE_RAW_COMMAND,
     SERVICE_REFRESH,
-    SERVICE_TURN_OFF_AIR_CONDITIONERS,
 )
 from .coordinator import KonkeDataUpdateCoordinator
-from .exceptions import KonkeApiError, KonkeAuthError
+from .exceptions import KonkeAuthError
 from .options import options_from_entry
-
-_LOGGER = logging.getLogger(__name__)
 
 SERVICE_EXECUTE_SCENE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_SCENE_ID): cv.positive_int,
         vol.Optional(ATTR_ENTRY_ID): cv.string,
-    }
-)
-
-ROOM_FILTER_SCHEMA = {
-    vol.Optional(ATTR_ENTRY_ID): cv.string,
-    vol.Optional(ATTR_INCLUDE_ROOM_NAMES, default=[]): vol.All(cv.ensure_list, [cv.string]),
-    vol.Optional(ATTR_EXCLUDE_ROOM_NAMES, default=[]): vol.All(cv.ensure_list, [cv.string]),
-    vol.Optional(ATTR_INCLUDE_ROOM_IDS, default=[]): vol.All(cv.ensure_list, [cv.string]),
-    vol.Optional(ATTR_EXCLUDE_ROOM_IDS, default=[]): vol.All(cv.ensure_list, [cv.string]),
-    vol.Optional(ATTR_INCLUDE_OFFLINE, default=False): cv.boolean,
-    vol.Optional(ATTR_ONLY_ON, default=False): cv.boolean,
-}
-
-SERVICE_LIST_AIR_CONDITIONERS_SCHEMA = vol.Schema(ROOM_FILTER_SCHEMA)
-
-SERVICE_TURN_OFF_AIR_CONDITIONERS_SCHEMA = vol.Schema(
-    {
-        **ROOM_FILTER_SCHEMA,
-        vol.Optional(ATTR_DRY_RUN, default=False): cv.boolean,
     }
 )
 
@@ -100,22 +68,6 @@ def _get_coordinator(
             "More than one Konke entry exists; pass entry_id to select one"
         )
     return next(iter(coordinators.values()))
-
-
-def _air_conditioners_from_call(
-    coordinator: KonkeDataUpdateCoordinator,
-    call: ServiceCall,
-) -> list[dict]:
-    """Return air conditioners matching a service call's filters."""
-    return filter_air_conditioners(
-        coordinator.data.get("devices", []),
-        include_room_names=call.data.get(ATTR_INCLUDE_ROOM_NAMES),
-        exclude_room_names=call.data.get(ATTR_EXCLUDE_ROOM_NAMES),
-        include_room_ids=call.data.get(ATTR_INCLUDE_ROOM_IDS),
-        exclude_room_ids=call.data.get(ATTR_EXCLUDE_ROOM_IDS),
-        include_offline=call.data.get(ATTR_INCLUDE_OFFLINE, False),
-        only_on=call.data.get(ATTR_ONLY_ON, False),
-    )
 
 
 def _home_id_from_coordinator(coordinator: KonkeDataUpdateCoordinator) -> str | int:
@@ -158,27 +110,6 @@ async def _async_control_device_with_reauth(
         )
 
 
-async def _turn_off_one_air_conditioner(
-    coordinator: KonkeDataUpdateCoordinator,
-    home_id: str | int,
-    device: dict,
-) -> dict:
-    """Turn off one air conditioner, refreshing auth once if needed."""
-    try:
-        payload = await coordinator.client.turn_off_air_conditioner(
-            home_id=home_id,
-            device=device,
-        )
-    except KonkeAuthError:
-        if not await coordinator.async_refresh_auth():
-            raise
-        payload = await coordinator.client.turn_off_air_conditioner(
-            home_id=home_id,
-            device=device,
-        )
-    return payload
-
-
 async def _async_execute_scene(hass: HomeAssistant, call: ServiceCall) -> None:
     """Execute a Konke scene by ID."""
     entry_id = call.data.get(ATTR_ENTRY_ID)
@@ -192,65 +123,6 @@ async def _async_execute_scene(hass: HomeAssistant, call: ServiceCall) -> None:
         if not await coordinator.async_refresh_auth():
             raise
         await coordinator.client.execute_scene(home_id=home_id, scene_id=scene_id)
-
-
-async def _async_list_air_conditioners(
-    hass: HomeAssistant,
-    call: ServiceCall,
-) -> dict:
-    """List air conditioners matching room filters."""
-    coordinator = _get_coordinator(hass, call.data.get(ATTR_ENTRY_ID))
-    devices = _air_conditioners_from_call(coordinator, call)
-    return {
-        "count": len(devices),
-        "devices": [summarize_air_conditioner(device) for device in devices],
-    }
-
-
-async def _async_turn_off_air_conditioners(
-    hass: HomeAssistant,
-    call: ServiceCall,
-) -> dict:
-    """Turn off air conditioners matching room filters."""
-    coordinator = _get_coordinator(hass, call.data.get(ATTR_ENTRY_ID))
-    home_id = _home_id_from_coordinator(coordinator)
-
-    devices = _air_conditioners_from_call(coordinator, call)
-    dry_run = call.data.get(ATTR_DRY_RUN, False)
-    summaries = [summarize_air_conditioner(device) for device in devices]
-    if dry_run:
-        return {
-            "dry_run": True,
-            "count": len(devices),
-            "devices": summaries,
-        }
-
-    results: list[dict] = []
-    failures: list[dict] = []
-    for device, summary in zip(devices, summaries, strict=False):
-        try:
-            payload = await _turn_off_one_air_conditioner(coordinator, home_id, device)
-        except KonkeApiError as err:
-            failures.append({**summary, "error": str(err)})
-            continue
-        results.append({**summary, "response": payload})
-
-    await coordinator.async_request_refresh()
-    if failures and not results:
-        raise HomeAssistantError(
-            f"Failed to turn off all Konke air conditioners: {failures}"
-        )
-    if failures:
-        _LOGGER.warning("Some Konke air conditioners failed to turn off: %s", failures)
-    return {
-        "dry_run": False,
-        "count": len(devices),
-        "succeeded": len(results),
-        "failed": len(failures),
-        "devices": summaries,
-        "results": results,
-        "failures": failures,
-    }
 
 
 async def _async_refresh(hass: HomeAssistant, call: ServiceCall) -> dict:
@@ -295,14 +167,6 @@ def async_register_services(hass: HomeAssistant) -> None:
         """Execute a Konke scene by ID."""
         await _async_execute_scene(hass, call)
 
-    async def async_list_air_conditioners(call: ServiceCall) -> dict:
-        """List air conditioners matching room filters."""
-        return await _async_list_air_conditioners(hass, call)
-
-    async def async_turn_off_air_conditioners(call: ServiceCall) -> dict:
-        """Turn off air conditioners matching room filters."""
-        return await _async_turn_off_air_conditioners(hass, call)
-
     async def async_refresh(call: ServiceCall) -> dict:
         """Refresh Konke data."""
         return await _async_refresh(hass, call)
@@ -317,22 +181,6 @@ def async_register_services(hass: HomeAssistant) -> None:
             SERVICE_EXECUTE_SCENE,
             async_execute_scene,
             schema=SERVICE_EXECUTE_SCENE_SCHEMA,
-        )
-    if not hass.services.has_service(DOMAIN, SERVICE_LIST_AIR_CONDITIONERS):
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_LIST_AIR_CONDITIONERS,
-            async_list_air_conditioners,
-            schema=SERVICE_LIST_AIR_CONDITIONERS_SCHEMA,
-            supports_response=SupportsResponse.ONLY,
-        )
-    if not hass.services.has_service(DOMAIN, SERVICE_TURN_OFF_AIR_CONDITIONERS):
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_TURN_OFF_AIR_CONDITIONERS,
-            async_turn_off_air_conditioners,
-            schema=SERVICE_TURN_OFF_AIR_CONDITIONERS_SCHEMA,
-            supports_response=SupportsResponse.OPTIONAL,
         )
     if not hass.services.has_service(DOMAIN, SERVICE_REFRESH):
         hass.services.async_register(

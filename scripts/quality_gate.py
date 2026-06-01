@@ -25,9 +25,9 @@ ALLOWED_HTTP_FILES = {
 }
 ALLOWED_DEVICE_TYPE_FILES = {
     INTEGRATION / "capabilities.py",
+    INTEGRATION / "device_profiles.py",
     INTEGRATION / "models.py",
     INTEGRATION / "mappings.py",
-    INTEGRATION / "air_conditioner.py",  # Historical debt; do not add more.
 }
 ALLOWED_SECRET_WORD_FILES = {
     INTEGRATION / "api.py",
@@ -67,9 +67,10 @@ def main() -> int:
     failures.extend(check_translations())
     failures.extend(check_python_parse())
     failures.extend(check_compileall())
-    failures.extend(check_unittest())
+    failures.extend(check_pytest())
     failures.extend(check_platform_boundaries())
     failures.extend(check_device_type_boundaries())
+    failures.extend(check_platform_helpers_boundary())
     failures.extend(check_secret_literals())
     failures.extend(check_release_package_hygiene())
 
@@ -93,6 +94,7 @@ def check_required_files() -> list[str]:
         INTEGRATION / "capabilities.py",
         INTEGRATION / "options.py",
         INTEGRATION / "profile.py",
+        INTEGRATION / "device_profiles.py",
         INTEGRATION / "models.py",
         INTEGRATION / "mappings.py",
         INTEGRATION / "entity.py",
@@ -133,8 +135,6 @@ def check_translations() -> list[str]:
         "execute_scene",
         "refresh",
         "raw_command",
-        "list_air_conditioners",
-        "turn_off_air_conditioners",
     }
     for path in sorted((INTEGRATION / "translations").glob("*.json")):
         try:
@@ -183,13 +183,13 @@ def check_compileall() -> list[str]:
     ]
 
 
-def check_unittest() -> list[str]:
-    """Run pure Python unit tests that do not require Home Assistant."""
-    tests_dir = ROOT / "tests"
+def check_pytest() -> list[str]:
+    """Run Home Assistant pytest tests."""
+    tests_dir = ROOT / "tests" / "components" / "konke"
     if not tests_dir.exists():
-        return ["Missing tests directory"]
+        return ["Missing Home Assistant pytest directory: tests/components/konke"]
     result = subprocess.run(
-        [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"],
+        [sys.executable, "-m", "pytest", "tests/components/konke"],
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -198,7 +198,7 @@ def check_unittest() -> list[str]:
     if result.returncode == 0:
         return []
     return [
-        "unittest failed: "
+        "pytest failed: "
         + (result.stderr.strip() or result.stdout.strip() or "unknown error")
     ]
 
@@ -231,7 +231,12 @@ def check_device_type_boundaries() -> list[str]:
     """Keep device type string matching centralized."""
     failures: list[str] = []
     for path in python_files():
-        if path in ALLOWED_DEVICE_TYPE_FILES or "scripts" in path.relative_to(ROOT).parts:
+        relative_parts = path.relative_to(ROOT).parts
+        if (
+            path in ALLOWED_DEVICE_TYPE_FILES
+            or "scripts" in relative_parts
+            or "tests" in relative_parts
+        ):
             continue
         try:
             tree = ast.parse(path.read_text(), filename=str(path))
@@ -253,6 +258,40 @@ def check_device_type_boundaries() -> list[str]:
         if hits:
             failures.append(
                 f"{path.relative_to(ROOT)} contains device type strings outside models/mappings: {', '.join(hits)}"
+            )
+    return failures
+
+
+def check_platform_helpers_boundary() -> list[str]:
+    """Keep platform_helpers as a narrow pure platform helper module."""
+    path = INTEGRATION / "platform_helpers.py"
+    if not path.exists():
+        return ["Missing platform_helpers.py"]
+
+    text = path.read_text()
+    forbidden_terms = (
+        "api",
+        "client",
+        "command",
+        "profile",
+        "services",
+        "ACTION_",
+        "build_device_action_body",
+        "aiohttp",
+        "ClientSession",
+        "kapp.ikonke.com",
+        "ACCOUNT_BASE_URL",
+        "API_BASE_URL",
+    )
+    failures = [
+        f"platform_helpers.py must not contain boundary term: {term}"
+        for term in forbidden_terms
+        if term in text
+    ]
+    for term in DEVICE_TYPE_TERMS:
+        if term in text:
+            failures.append(
+                f"platform_helpers.py must not contain device type string: {term}"
             )
     return failures
 
