@@ -18,7 +18,7 @@ from .command import ACTION_PAUSE, ACTION_TURN_OFF, ACTION_TURN_ON
 from .const import DOMAIN
 from .coordinator import KonkeDataUpdateCoordinator
 from .entity import KonkeDeviceEntity
-from .models import KonkeDevice, nested
+from .models import KonkeDevice, current_state_for_raw
 from .options import options_from_entry
 
 
@@ -139,13 +139,7 @@ def _device_ids_for_capability(
 
 def _current_state(device: KonkeDevice) -> dict[str, Any]:
     """Return the best cached current state payload for a device."""
-    current = nested(device.raw, "cache", "extension", "current")
-    if isinstance(current, dict):
-        return current
-    extension = nested(device.raw, "cache", "extension")
-    if isinstance(extension, dict):
-        return extension
-    return {}
+    return current_state_for_raw(device.raw)
 
 
 def _int_from_state(state: dict[str, Any], *keys: str) -> int | None:

@@ -8,10 +8,12 @@ from pathlib import Path
 
 import hass_shim  # noqa: F401
 
+from custom_components.konke.api import _merge_device_cache
 from custom_components.konke.capabilities import KonkeCapability
 from custom_components.konke.models import (
     KonkeDevice,
     build_device_indexes,
+    current_state_for_raw,
 )
 
 
@@ -85,5 +87,91 @@ class ModelTest(unittest.TestCase):
                 ("2001", "switch", "switch"),
                 ("3001", KonkeCapability.FLOOR_HEATING.value, "climate"),
                 ("4001", "cover", "cover"),
+            },
+        )
+
+    def test_current_state_merges_extension_and_current(self) -> None:
+        """Sparse current snapshots do not hide stable extension values."""
+        raw = {
+            "cache": {
+                "extension": {
+                    "operationMode": 2,
+                    "position": 99,
+                    "current": {
+                        "operationMode": 1,
+                        "updateTime": 123,
+                    },
+                },
+            },
+        }
+
+        self.assertEqual(
+            current_state_for_raw(raw),
+            {
+                "operationMode": 1,
+                "position": 99,
+                "updateTime": 123,
+            },
+        )
+
+    def test_properties_keep_extension_values_missing_from_current(self) -> None:
+        """Device summaries include parent extension values absent from current."""
+        raw = load_devices()[3]
+        raw["cache"]["extension"] = {
+            "operationMode": 2,
+            "position": 99,
+            "current": {
+                "operationMode": 1,
+                "updateTime": 123,
+            },
+        }
+        device = KonkeDevice.from_raw(raw)
+
+        properties = {prop.key: prop for prop in device.properties}
+        self.assertEqual(properties["position"].value, 99)
+        self.assertEqual(properties["position"].source, "cache.extension")
+        self.assertEqual(properties["operationMode"].value, 1)
+        self.assertEqual(properties["operationMode"].source, "cache.extension.current")
+
+    def test_device_cache_merge_preserves_device_shape(self) -> None:
+        """Area cache snapshots are merged into device cache extension."""
+        devices = [
+            {
+                "userDeviceId": 4001,
+                "deviceName": "窗帘",
+                "cache": {
+                    "isOnline": True,
+                    "extension": {
+                        "operationMode": 1,
+                        "current": {
+                            "operationMode": 2,
+                            "updateTime": 123,
+                        },
+                    },
+                },
+            }
+        ]
+        merged = _merge_device_cache(
+            devices,
+            [
+                {
+                    "userDeviceId": 4001,
+                    "roomId": 1,
+                    "operationMode": 2,
+                    "position": 99,
+                    "routeState": 1,
+                    "isOnline": True,
+                }
+            ],
+        )
+
+        self.assertEqual(merged[0]["userDeviceId"], 4001)
+        self.assertEqual(merged[0]["cache"]["extension"]["position"], 99)
+        self.assertEqual(merged[0]["cache"]["extension"]["routeState"], 1)
+        self.assertEqual(
+            merged[0]["cache"]["extension"]["current"],
+            {
+                "operationMode": 2,
+                "updateTime": 123,
             },
         )

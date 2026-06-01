@@ -31,7 +31,7 @@ from .command import (
 from .const import DOMAIN
 from .coordinator import KonkeDataUpdateCoordinator
 from .entity import KonkeDeviceEntity
-from .models import KonkeDevice, maybe_bool, nested
+from .models import KonkeDevice, current_state_for_raw, maybe_bool
 from .options import options_from_entry
 
 _AIR_CONDITIONER_MODE_TO_HVAC = {
@@ -454,13 +454,7 @@ def _device_ids_for_capability(
 
 def _current_state(device: KonkeDevice) -> dict[str, Any]:
     """Return the best cached current state payload for a device."""
-    current = nested(device.raw, "cache", "extension", "current")
-    if isinstance(current, dict):
-        return current
-    extension = nested(device.raw, "cache", "extension")
-    if isinstance(extension, dict):
-        return extension
-    return {}
+    return current_state_for_raw(device.raw)
 
 
 def _power_from_state(state: dict[str, Any]) -> bool | None:

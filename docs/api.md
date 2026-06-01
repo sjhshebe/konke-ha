@@ -61,6 +61,7 @@ Do not paste raw captures, tokens, phone numbers, passwords, or home addresses h
 - WebSocket listener: `GET /ws/listener`
   - query contains `authorization`; keep it redacted.
 - Curtain motor actions:
+  - state cache endpoint: `GET /api/user/device/cache?areaId=<area_id>`
   - endpoint: `POST /api/device/action/control`
   - device type validated: `3215` / `curtain_motor` / `CurtainsMotor`
   - open body shape: `{"userDeviceId": <int>, "name": "TurnOn"}`
@@ -68,6 +69,9 @@ Do not paste raw captures, tokens, phone numbers, passwords, or home addresses h
   - pause body shape: `{"userDeviceId": <int>, "name": "Pause"}`
   - cache fields observed: `operationMode`, `workMode`, `routeState`,
     `position`, `innerType`, `cateType`, `userExtension`, `isOnline`.
+  - Some cloud payloads return sparse `cache.extension.current` objects, so
+    `cache.extension` and `cache.extension.current` must be merged before entity
+    state is derived. This keeps `position` available for HA `cover` state.
   - implemented by `command.py`, `api.py`, and the HA `cover` platform.
 - Floor-heating actions for `virtual_FH_3in1_mix` nodes:
   - endpoint: `POST /api/device/action/control`

@@ -489,6 +489,24 @@ class KonkeApiClient:
             return []
         return devices
 
+    async def fetch_device_cache(
+        self,
+        *,
+        home_id: str | int,
+        area_id: str | int,
+    ) -> list[dict[str, Any]]:
+        """Fetch current device cache snapshots for an area."""
+        payload = await self._request(
+            "GET",
+            "/user/device/cache",
+            home_id=home_id,
+            params={"areaId": area_id},
+        )
+        cache_list = payload.get("data", {}).get("cacheList") or []
+        if not isinstance(cache_list, list):
+            return []
+        return [item for item in cache_list if isinstance(item, dict)]
+
     @staticmethod
     def extract_home(home_index: dict[str, Any]) -> dict[str, Any]:
         """Extract current home from home index payload."""
@@ -557,9 +575,16 @@ class KonkeApiClient:
             if not area_id:
                 continue
             try:
-                devices.extend(await self.fetch_devices(home_id=home_id, area_id=area_id))
+                area_devices = await self.fetch_devices(home_id=home_id, area_id=area_id)
             except KonkeApiError as err:
                 _LOGGER.debug("Failed fetching devices for area %s: %s", area_id, err)
+                continue
+            try:
+                area_cache = await self.fetch_device_cache(home_id=home_id, area_id=area_id)
+            except KonkeApiError as err:
+                _LOGGER.debug("Failed fetching device cache for area %s: %s", area_id, err)
+                area_cache = []
+            devices.extend(_merge_device_cache(area_devices, area_cache))
 
         device_indexes = build_device_indexes(devices)
         normalized_devices = device_indexes["devices"]
@@ -581,3 +606,60 @@ class KonkeApiClient:
             ],
             "skipped_devices": device_indexes["skipped_devices"],
         }
+
+
+def _merge_device_cache(
+    devices: list[dict[str, Any]],
+    cache_list: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Merge area cache snapshots into visible device payloads."""
+    cache_by_id = {
+        str(item["userDeviceId"]): item
+        for item in cache_list
+        if item.get("userDeviceId") is not None
+    }
+    if not cache_by_id:
+        return devices
+
+    merged: list[dict[str, Any]] = []
+    for device in devices:
+        device_id = device.get("userDeviceId")
+        cache = cache_by_id.get(str(device_id)) if device_id is not None else None
+        if cache is None:
+            merged.append(device)
+            continue
+        merged.append(_merge_single_device_cache(device, cache))
+    return merged
+
+
+def _merge_single_device_cache(
+    device: dict[str, Any],
+    cache: dict[str, Any],
+) -> dict[str, Any]:
+    """Return a device payload with cache-list state merged into cache.extension."""
+    merged = dict(device)
+    device_cache = merged.get("cache")
+    if not isinstance(device_cache, dict):
+        device_cache = {}
+    else:
+        device_cache = dict(device_cache)
+
+    extension = device_cache.get("extension")
+    if not isinstance(extension, dict):
+        extension = {}
+    else:
+        extension = dict(extension)
+
+    for key, value in cache.items():
+        if key in {"userDeviceId", "roomId"}:
+            continue
+        extension[key] = value
+
+    if "isOnline" in cache:
+        device_cache["isOnline"] = cache["isOnline"]
+    if "updateTime" in cache:
+        device_cache["updateTime"] = cache["updateTime"]
+
+    device_cache["extension"] = extension
+    merged["cache"] = device_cache
+    return merged

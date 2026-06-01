@@ -44,6 +44,28 @@ def maybe_bool(value: Any) -> bool | None:
     return None
 
 
+def current_state_for_raw(raw: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a merged scalar state snapshot from known cache payloads."""
+    state: dict[str, Any] = {}
+    extension = nested(raw, "cache", "extension")
+    current: Any = None
+
+    if isinstance(extension, Mapping):
+        current = extension.get("current")
+        for key, value in extension.items():
+            if key == "current" or isinstance(value, (Mapping, list)):
+                continue
+            state[str(key)] = value
+
+    if isinstance(current, Mapping):
+        for key, value in current.items():
+            if isinstance(value, (Mapping, list)):
+                continue
+            state[str(key)] = value
+
+    return state
+
+
 def as_str_list(value: Any) -> list[str]:
     """Return a list of strings from an arbitrary list-like value."""
     if not isinstance(value, list):
@@ -247,20 +269,34 @@ def capabilities_for_raw_device(raw: Mapping[str, Any]) -> set[KonkeCapability]:
 
 def properties_for_raw_device(raw: Mapping[str, Any]) -> list[KonkeProperty]:
     """Extract a stable property snapshot from known cache payloads."""
-    properties: list[KonkeProperty] = []
-    for source, value in (
-        ("cache.extension.current", nested(raw, "cache", "extension", "current")),
-        ("cache.extension", nested(raw, "cache", "extension")),
-    ):
-        if not isinstance(value, Mapping):
-            continue
-        for key, item in value.items():
+    properties_by_key: dict[str, KonkeProperty] = {}
+    extension = nested(raw, "cache", "extension")
+    current: Any = None
+
+    if isinstance(extension, Mapping):
+        current = extension.get("current")
+        for key, item in extension.items():
+            if key == "current" or isinstance(item, (Mapping, list)):
+                continue
+            normalized_key = str(key)
+            properties_by_key[normalized_key] = KonkeProperty(
+                key=normalized_key,
+                value=item,
+                source="cache.extension",
+            )
+
+    if isinstance(current, Mapping):
+        for key, item in current.items():
             if isinstance(item, (Mapping, list)):
                 continue
-            properties.append(KonkeProperty(key=str(key), value=item, source=source))
-        if properties:
-            break
-    return properties
+            normalized_key = str(key)
+            properties_by_key[normalized_key] = KonkeProperty(
+                key=normalized_key,
+                value=item,
+                source="cache.extension.current",
+            )
+
+    return list(properties_by_key.values())
 
 
 def commands_for_raw_device(raw: Mapping[str, Any]) -> list[KonkeCommand]:
