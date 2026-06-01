@@ -4,10 +4,55 @@
 
 ## 安装
 
+### 方式一：一键安装
+
+在 Home Assistant 的 Terminal / SSH 中运行：
+
+```bash
+curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh -o /tmp/konke-install.sh && sh /tmp/konke-install.sh
+```
+
+脚本会下载 `main` 分支的最新稳定版本，安装到 Home Assistant 的
+`custom_components/konke`，并在安装前备份旧版本。安装完成后会自动重启
+Home Assistant Core。
+
+如果你的环境没有 `curl`，也可以使用：
+
+```bash
+wget -q -T 30 -t 3 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh -O /tmp/konke-install.sh && sh /tmp/konke-install.sh
+```
+
+### 方式二：手动安装
+
 1. 将本目录里的 `custom_components/konke` 复制到 Home Assistant 的 `/config/custom_components/konke`。
 2. 重启 Home Assistant。
 3. 进入 `设置 -> 设备与服务 -> 添加集成`，搜索 `控客智能` 或 `Konke Smart`。
 4. 选择 `手机号和密码` 登录，填写控客账号手机号和密码；集成会自动登录控客接口，并保存后续请求需要的 token。
+
+## 更新
+
+### 方式一：一键更新
+
+以后更新到最新稳定版本时，在 Home Assistant 的 Terminal / SSH 中运行：
+
+```bash
+curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh -o /tmp/konke-update.sh && sh /tmp/konke-update.sh
+```
+
+如果你的环境没有 `curl`，也可以使用：
+
+```bash
+wget -q -T 30 -t 3 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh -O /tmp/konke-update.sh && sh /tmp/konke-update.sh
+```
+
+更新脚本会复用安装脚本的逻辑，自动备份旧版本、覆盖安装最新版本，并重启
+Home Assistant Core。
+
+### 方式二：手动更新
+
+1. 下载最新版本源码。
+2. 用新的 `custom_components/konke` 覆盖 Home Assistant 的 `/config/custom_components/konke`。
+3. 重启 Home Assistant。
 
 ## 已确认接口
 
@@ -26,7 +71,10 @@
 
 ### 场景
 
-控客场景会同步为 HA `scene` 实体。
+控客普通场景会同步为 HA `scene` 实体。控客 App 内部生成的多控分组
+场景，例如 `空调多控`、`新风多控`，不会从云端场景同步请求中读取，也不
+会创建为 HA 实体；这些分组更像控客内部设备关系说明，日常自动化应直接
+使用对应的 `climate`、`cover` 等标准实体。
 
 ### 空调
 

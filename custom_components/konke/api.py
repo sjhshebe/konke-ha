@@ -36,6 +36,8 @@ from .models import build_device_indexes, summarize_device
 
 _LOGGER = logging.getLogger(__name__)
 
+_SCENE_TYPES_FOR_SYNC = "Normal,ExternalScene"
+
 
 class KonkeApiClient:
     """Small async client for the Konke Smart cloud API."""
@@ -301,7 +303,7 @@ class KonkeApiClient:
                 "orderByField": "sort",
                 "orderByType": "asc",
                 "roomId": room_id,
-                "sceneTypes": "Normal,ExternalScene,MultiControl",
+                "sceneTypes": _SCENE_TYPES_FOR_SYNC,
             },
         )
         page = payload.get("data", {}).get("pagePojo", {})

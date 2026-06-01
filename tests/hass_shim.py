@@ -114,6 +114,41 @@ helpers = sys.modules.setdefault(
     "homeassistant.helpers",
     types.ModuleType("homeassistant.helpers"),
 )
+helpers.entity_platform = sys.modules.setdefault(
+    "homeassistant.helpers.entity_platform",
+    types.ModuleType("homeassistant.helpers.entity_platform"),
+)
+helpers.entity_platform.AddEntitiesCallback = object
+helpers.entity_registry = sys.modules.setdefault(
+    "homeassistant.helpers.entity_registry",
+    types.ModuleType("homeassistant.helpers.entity_registry"),
+)
+
+
+class _EntityRegistry:
+    def __init__(self) -> None:
+        self.removed: list[str] = []
+
+    def async_get_entity_id(self, platform, domain, unique_id):
+        return None
+
+    def async_remove(self, entity_id) -> None:
+        self.removed.append(entity_id)
+
+
+helpers.entity_registry.async_get = lambda hass: _EntityRegistry()
+helpers.device_registry = sys.modules.setdefault(
+    "homeassistant.helpers.device_registry",
+    types.ModuleType("homeassistant.helpers.device_registry"),
+)
+
+
+class _DeviceRegistry:
+    def async_get_or_create(self, *args, **kwargs):
+        return None
+
+
+helpers.device_registry.async_get = lambda hass: _DeviceRegistry()
 helpers.update_coordinator = sys.modules.setdefault(
     "homeassistant.helpers.update_coordinator",
     types.ModuleType("homeassistant.helpers.update_coordinator"),
@@ -145,5 +180,35 @@ class _UpdateFailed(Exception):
     pass
 
 
+class _CoordinatorEntity:
+    @classmethod
+    def __class_getitem__(cls, item):
+        return cls
+
+    def __init__(self, coordinator) -> None:
+        self.coordinator = coordinator
+
+    @property
+    def available(self):
+        return True
+
+
+helpers.update_coordinator.CoordinatorEntity = _CoordinatorEntity
 helpers.update_coordinator.DataUpdateCoordinator = _DataUpdateCoordinator
 helpers.update_coordinator.UpdateFailed = _UpdateFailed
+
+homeassistant.components = sys.modules.setdefault(
+    "homeassistant.components",
+    types.ModuleType("homeassistant.components"),
+)
+homeassistant.components.scene = sys.modules.setdefault(
+    "homeassistant.components.scene",
+    types.ModuleType("homeassistant.components.scene"),
+)
+
+
+class _Scene:
+    pass
+
+
+homeassistant.components.scene.Scene = _Scene

@@ -18,6 +18,9 @@ Do not paste raw captures, tokens, phone numbers, passwords, or home addresses h
   - query: `synUserHostList`
   - response `data` contains `hostDevice`, `otherHosts`, `homeList`, and `home`.
 - Room scenes: `GET /api/v2/scene`
+  - sync query `sceneTypes` is limited to `Normal,ExternalScene`.
+  - `MultiControl` scenes are internal app groupings and are intentionally not
+    requested or exposed as Home Assistant scene entities.
 - Scene detail: `GET /api/scene/{scene_id}`
 - Scene execution: `POST /api/scene/action`
 - Visible devices: `GET /api/user/device`

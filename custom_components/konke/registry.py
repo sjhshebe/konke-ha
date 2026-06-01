@@ -78,8 +78,6 @@ def konke_device_info(
 
 def device_registry_name(device: KonkeDevice) -> str:
     """Return the device name shown on the HA device page."""
-    if device.room_name and device.name:
-        return f"{device.room_name} {device.name}"
     return device.name or device.user_device_id
 
 
