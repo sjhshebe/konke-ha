@@ -1,6 +1,7 @@
 [tool.pytest.ini_options]
 testpaths = ["tests/components/konke"]
 pythonpath = ["."]
+asyncio_mode = "auto"
 addopts = "-q"
 
 [tool.ruff]
