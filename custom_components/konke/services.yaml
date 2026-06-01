@@ -1,0 +1,177 @@
+execute_scene:
+  name: Execute scene
+  description: Execute a Konke Smart scene by scene ID.
+  fields:
+    scene_id:
+      name: Scene ID
+      description: Konke sceneId, for example 123456.
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+    entry_id:
+      name: Entry ID
+      description: Optional Home Assistant config entry ID. Only needed when multiple Konke accounts are configured.
+      required: false
+      selector:
+        text: {}
+
+refresh:
+  name: Refresh
+  description: Refresh Konke Smart cloud data for a config entry.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional Home Assistant config entry ID. Only needed when multiple Konke accounts are configured.
+      required: false
+      selector:
+        text: {}
+
+raw_command:
+  name: Raw command
+  description: Send a raw Konke device action. This service only works when debug raw command is enabled in integration options.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional Home Assistant config entry ID. Only needed when multiple Konke accounts are configured.
+      required: false
+      selector:
+        text: {}
+    user_device_id:
+      name: User device ID
+      description: Konke userDeviceId to control.
+      required: true
+      selector:
+        text: {}
+    action_name:
+      name: Action name
+      description: Konke action name, for example TurnOff.
+      required: true
+      selector:
+        text: {}
+    extension:
+      name: Extension
+      description: Optional action extension payload.
+      required: false
+      selector:
+        object: {}
+    extra:
+      name: Extra
+      description: Optional extra fields merged into the command body.
+      required: false
+      selector:
+        object: {}
+
+list_air_conditioners:
+  name: List air conditioners
+  description: List Konke air conditioner devices matching the room filters.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional Home Assistant config entry ID. Only needed when multiple Konke accounts are configured.
+      required: false
+      selector:
+        text: {}
+    include_room_names:
+      name: Include room names
+      description: Only include air conditioners in these room names.
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_room_names:
+      name: Exclude room names
+      description: Exclude air conditioners in these room names.
+      required: false
+      selector:
+        text:
+          multiple: true
+    include_room_ids:
+      name: Include room IDs
+      description: Only include air conditioners in these Konke room IDs.
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_room_ids:
+      name: Exclude room IDs
+      description: Exclude air conditioners in these Konke room IDs.
+      required: false
+      selector:
+        text:
+          multiple: true
+    include_offline:
+      name: Include offline devices
+      description: Include devices reported offline by Konke.
+      required: false
+      default: false
+      selector:
+        boolean: {}
+    only_on:
+      name: Only powered-on devices
+      description: Only include devices whose cached power state is on.
+      required: false
+      default: false
+      selector:
+        boolean: {}
+
+turn_off_air_conditioners:
+  name: Turn off air conditioners
+  description: Turn off Konke air conditioners matching the room filters.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional Home Assistant config entry ID. Only needed when multiple Konke accounts are configured.
+      required: false
+      selector:
+        text: {}
+    include_room_names:
+      name: Include room names
+      description: Only turn off air conditioners in these room names.
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_room_names:
+      name: Exclude room names
+      description: Exclude air conditioners in these room names.
+      required: false
+      selector:
+        text:
+          multiple: true
+    include_room_ids:
+      name: Include room IDs
+      description: Only turn off air conditioners in these Konke room IDs.
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_room_ids:
+      name: Exclude room IDs
+      description: Exclude air conditioners in these Konke room IDs.
+      required: false
+      selector:
+        text:
+          multiple: true
+    include_offline:
+      name: Include offline devices
+      description: Include devices reported offline by Konke.
+      required: false
+      default: false
+      selector:
+        boolean: {}
+    only_on:
+      name: Only powered-on devices
+      description: Only send turn-off commands to devices whose cached power state is on.
+      required: false
+      default: false
+      selector:
+        boolean: {}
+    dry_run:
+      name: Dry run
+      description: Return matching devices without sending control commands.
+      required: false
+      default: false
+      selector:
+        boolean: {}

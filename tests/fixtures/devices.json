@@ -1,0 +1,52 @@
+[
+  {
+    "userDeviceId": "1001",
+    "deviceName": "空调左",
+    "roomId": "room-living",
+    "roomName": "客厅",
+    "areaId": "area-main",
+    "areaName": "默认区域",
+    "device": {
+      "cateType": "AirCondition",
+      "deviceType": {
+        "cateType": "AirCondition",
+        "innerType": "fan_coil",
+        "productId": "kk-ac",
+        "typeName": "空调",
+        "actionList": ["TurnOn", "TurnOff"]
+      }
+    },
+    "cache": {
+      "isOnline": true,
+      "extension": {
+        "current": {
+          "on": true,
+          "curTemp": 26,
+          "setTemp": 24,
+          "workMode": 1,
+          "speed": "auto"
+        }
+      }
+    }
+  },
+  {
+    "userDeviceId": "2001",
+    "deviceName": "一路开关",
+    "roomId": "room-living",
+    "roomName": "客厅",
+    "device": {
+      "deviceType": {
+        "productId": "kk-switch",
+        "typeName": "开关",
+        "actionList": ["TurnOn", "TurnOff"]
+      }
+    },
+    "cache": {
+      "extension": {
+        "current": {
+          "turnOnOff": false
+        }
+      }
+    }
+  }
+]

@@ -1,0 +1,192 @@
+{
+  "title": "Konke Smart",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Konke Smart",
+        "description": "Choose an authentication method.",
+        "data": {
+          "auth_method": "Authentication method"
+        }
+      },
+      "token": {
+        "title": "Use Access Token",
+        "description": "Enter the Konke accessToken.",
+        "data": {
+          "access_token": "Access Token",
+          "refresh_token": "Refresh Token",
+          "country_code": "Country code",
+          "region_id": "Region ID"
+        }
+      },
+      "password": {
+        "title": "Use phone and password",
+        "description": "Enter your Konke Smart account. The password is stored in Home Assistant config storage; background password reauthentication is disabled by default to avoid invalidating mobile app sessions.",
+        "data": {
+          "username": "Phone number",
+          "password": "Password",
+          "country_code": "Country code",
+          "region_id": "Region ID"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Konke Smart",
+        "description": "The current credentials are no longer valid. Enter your Konke Smart account again.",
+        "data": {
+          "username": "Phone number",
+          "password": "Password",
+          "country_code": "Country code",
+          "region_id": "Region ID"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to Konke cloud.",
+      "invalid_auth": "Authentication failed. Check your account, password, or token.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This Konke home is already configured.",
+      "reauth_successful": "Konke Smart reauthentication succeeded.",
+      "reauth_entry_missing": "The Konke config entry to reauthenticate was not found."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Konke Smart options",
+        "data": {
+          "scan_interval": "Refresh interval in minutes",
+          "create_scene_entities": "Create scene entities",
+          "create_offline_device_entities": "Create offline device entities",
+          "debug_raw_command": "Enable debug raw_command service",
+          "allow_password_reauth": "Allow background password reauthentication"
+        }
+      }
+    }
+  },
+  "services": {
+      "execute_scene": {
+        "name": "Execute scene",
+        "description": "Execute a Konke Smart scene by scene ID.",
+        "fields": {
+          "scene_id": {
+            "name": "Scene ID",
+          "description": "Konke sceneId, for example 123456."
+        },
+        "entry_id": {
+          "name": "Entry ID",
+            "description": "Optional config entry ID when multiple Konke accounts are configured."
+          }
+      }
+    },
+    "refresh": {
+      "name": "Refresh",
+      "description": "Refresh Konke Smart cloud data.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Optional config entry ID when multiple Konke accounts are configured."
+        }
+      }
+    },
+    "raw_command": {
+      "name": "Raw command",
+      "description": "Send a raw Konke device action. This only works when debug raw command is enabled in integration options.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "Optional config entry ID when multiple Konke accounts are configured."
+        },
+        "user_device_id": {
+          "name": "User device ID",
+          "description": "Konke userDeviceId to control."
+        },
+        "action_name": {
+          "name": "Action name",
+          "description": "Konke action name, for example TurnOff."
+        },
+        "extension": {
+          "name": "Extension",
+          "description": "Optional action extension payload."
+        },
+        "extra": {
+          "name": "Extra",
+          "description": "Optional extra fields merged into the command body."
+        }
+      }
+    },
+    "list_air_conditioners": {
+        "name": "List air conditioners",
+        "description": "List Konke air conditioner devices matching the room filters.",
+        "fields": {
+          "entry_id": {
+            "name": "Entry ID",
+            "description": "Optional Home Assistant config entry ID. Only needed when multiple Konke accounts are configured."
+          },
+          "include_room_names": {
+            "name": "Include room names",
+            "description": "Only include air conditioners in these room names."
+          },
+          "exclude_room_names": {
+            "name": "Exclude room names",
+            "description": "Exclude air conditioners in these room names."
+          },
+          "include_room_ids": {
+            "name": "Include room IDs",
+            "description": "Only include air conditioners in these Konke room IDs."
+          },
+          "exclude_room_ids": {
+            "name": "Exclude room IDs",
+            "description": "Exclude air conditioners in these Konke room IDs."
+          },
+          "include_offline": {
+            "name": "Include offline devices",
+            "description": "Include devices reported offline by Konke."
+          },
+          "only_on": {
+            "name": "Only powered-on devices",
+            "description": "Only include devices whose cached power state is on."
+          }
+        }
+      },
+      "turn_off_air_conditioners": {
+        "name": "Turn off air conditioners",
+        "description": "Turn off Konke air conditioners matching the room filters.",
+        "fields": {
+          "entry_id": {
+            "name": "Entry ID",
+            "description": "Optional Home Assistant config entry ID. Only needed when multiple Konke accounts are configured."
+          },
+          "include_room_names": {
+            "name": "Include room names",
+            "description": "Only turn off air conditioners in these room names."
+          },
+          "exclude_room_names": {
+            "name": "Exclude room names",
+            "description": "Exclude air conditioners in these room names."
+          },
+          "include_room_ids": {
+            "name": "Include room IDs",
+            "description": "Only turn off air conditioners in these Konke room IDs."
+          },
+          "exclude_room_ids": {
+            "name": "Exclude room IDs",
+            "description": "Exclude air conditioners in these Konke room IDs."
+          },
+          "include_offline": {
+            "name": "Include offline devices",
+            "description": "Include devices reported offline by Konke."
+          },
+          "only_on": {
+            "name": "Only powered-on devices",
+            "description": "Only send turn-off commands to devices whose cached power state is on."
+          },
+          "dry_run": {
+            "name": "Dry run",
+            "description": "Return matching devices without sending control commands."
+          }
+        }
+      }
+    }
+  }

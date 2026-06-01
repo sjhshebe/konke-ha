@@ -1,0 +1,12 @@
+{
+  "domain": "konke",
+  "name": "Konke Smart",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/custom-components/konke",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/custom-components/konke/issues",
+  "requirements": [],
+  "version": "0.5.1"
+}

@@ -1,0 +1,192 @@
+{
+  "title": "控客智能",
+  "config": {
+    "step": {
+      "user": {
+        "title": "控客智能",
+        "description": "选择登录方式。",
+        "data": {
+          "auth_method": "登录方式"
+        }
+      },
+      "token": {
+        "title": "使用 Access Token 登录",
+        "description": "填写控客接口的 accessToken。可选填写 refreshToken，用于后续自动续期。",
+        "data": {
+          "access_token": "Access Token",
+          "refresh_token": "Refresh Token",
+          "country_code": "国家/地区代码",
+          "region_id": "区域 ID"
+        }
+      },
+      "password": {
+        "title": "使用手机号和密码登录",
+        "description": "填写控客智能账号。密码会保存到 Home Assistant 配置存储中；默认不会在后台用密码自动重新登录，避免和手机 App/模拟器抢登录态。",
+        "data": {
+          "username": "手机号",
+          "password": "密码",
+          "country_code": "国家/地区代码",
+          "region_id": "区域 ID"
+        }
+      },
+      "reauth_confirm": {
+        "title": "重新登录控客智能",
+        "description": "当前凭据已失效，请重新填写控客智能账号。",
+        "data": {
+          "username": "手机号",
+          "password": "密码",
+          "country_code": "国家/地区代码",
+          "region_id": "区域 ID"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "无法连接控客云端。",
+      "invalid_auth": "认证失败，请检查账号、密码或 token。",
+      "unknown": "未知错误。"
+    },
+    "abort": {
+      "already_configured": "该控客家庭已经配置。",
+      "reauth_successful": "控客智能已重新登录。",
+      "reauth_entry_missing": "找不到需要重新登录的控客配置项。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "控客智能选项",
+        "data": {
+          "scan_interval": "刷新间隔（分钟）",
+          "create_scene_entities": "创建场景实体",
+          "create_offline_device_entities": "创建离线设备实体",
+          "debug_raw_command": "启用调试 raw_command 服务",
+          "allow_password_reauth": "允许后台用密码重新登录"
+        }
+      }
+    }
+  },
+  "services": {
+      "execute_scene": {
+        "name": "执行场景",
+        "description": "通过 sceneId 执行控客智能场景。",
+        "fields": {
+          "scene_id": {
+            "name": "场景 ID",
+          "description": "控客 sceneId，例如 123456。"
+        },
+        "entry_id": {
+          "name": "配置项 ID",
+            "description": "存在多个控客账号时用于指定配置项。"
+          }
+      }
+    },
+    "refresh": {
+      "name": "刷新",
+      "description": "刷新控客智能云端数据。",
+      "fields": {
+        "entry_id": {
+          "name": "配置项 ID",
+          "description": "存在多个控客账号时用于指定配置项。"
+        }
+      }
+    },
+    "raw_command": {
+      "name": "原始命令",
+      "description": "发送控客设备原始动作命令。只有在集成选项中启用调试 raw_command 后才可使用。",
+      "fields": {
+        "entry_id": {
+          "name": "配置项 ID",
+          "description": "存在多个控客账号时用于指定配置项。"
+        },
+        "user_device_id": {
+          "name": "用户设备 ID",
+          "description": "要控制的控客 userDeviceId。"
+        },
+        "action_name": {
+          "name": "动作名称",
+          "description": "控客动作名称，例如 TurnOff。"
+        },
+        "extension": {
+          "name": "扩展内容",
+          "description": "可选动作 extension payload。"
+        },
+        "extra": {
+          "name": "额外字段",
+          "description": "可选额外字段，会合并进命令 body。"
+        }
+      }
+    },
+    "list_air_conditioners": {
+        "name": "列出空调",
+        "description": "列出匹配房间过滤条件的控客空调设备。",
+        "fields": {
+          "entry_id": {
+            "name": "配置项 ID",
+            "description": "存在多个控客账号时用于指定配置项。"
+          },
+          "include_room_names": {
+            "name": "包含房间名称",
+            "description": "只包含这些房间中的空调。"
+          },
+          "exclude_room_names": {
+            "name": "排除房间名称",
+            "description": "排除这些房间中的空调。"
+          },
+          "include_room_ids": {
+            "name": "包含房间 ID",
+            "description": "只包含这些控客房间 ID 中的空调。"
+          },
+          "exclude_room_ids": {
+            "name": "排除房间 ID",
+            "description": "排除这些控客房间 ID 中的空调。"
+          },
+          "include_offline": {
+            "name": "包含离线设备",
+            "description": "包含控客报告为离线的设备。"
+          },
+          "only_on": {
+            "name": "仅开机设备",
+            "description": "只包含缓存状态为开机的设备。"
+          }
+        }
+      },
+      "turn_off_air_conditioners": {
+        "name": "关闭空调",
+        "description": "关闭匹配房间过滤条件的控客空调设备。",
+        "fields": {
+          "entry_id": {
+            "name": "配置项 ID",
+            "description": "存在多个控客账号时用于指定配置项。"
+          },
+          "include_room_names": {
+            "name": "包含房间名称",
+            "description": "只关闭这些房间中的空调。"
+          },
+          "exclude_room_names": {
+            "name": "排除房间名称",
+            "description": "排除这些房间中的空调。"
+          },
+          "include_room_ids": {
+            "name": "包含房间 ID",
+            "description": "只关闭这些控客房间 ID 中的空调。"
+          },
+          "exclude_room_ids": {
+            "name": "排除房间 ID",
+            "description": "排除这些控客房间 ID 中的空调。"
+          },
+          "include_offline": {
+            "name": "包含离线设备",
+            "description": "包含控客报告为离线的设备。"
+          },
+          "only_on": {
+            "name": "仅开机设备",
+            "description": "只向缓存状态为开机的设备发送关机命令。"
+          },
+          "dry_run": {
+            "name": "试运行",
+            "description": "只返回匹配设备，不发送控制命令。"
+          }
+        }
+      }
+    }
+  }

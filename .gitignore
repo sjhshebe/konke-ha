@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments and local tooling
+AGENTS.md
+scripts/quality_gate.py
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# Home Assistant local runtime data
+.storage/
+home-assistant_v2.db*
+home-assistant.log*
+deps/
+tts/
+
+# Build and release artifacts
+dist/
+build/
+*.zip
+*.tar
+*.tar.gz
+
+# Raw captures and local secrets
+*.mitm
+*.pcap
+*.pcapng
+*.har
+captures/
+private/
+secrets/
+*.key
+*.pem
+*.p12
+
+# OS/editor noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
