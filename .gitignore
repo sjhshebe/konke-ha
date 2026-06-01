@@ -9,7 +9,6 @@ htmlcov/
 
 # Virtual environments and local tooling
 AGENTS.md
-scripts/quality_gate.py
 .venv/
 venv/
 env/

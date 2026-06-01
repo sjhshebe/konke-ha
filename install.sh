@@ -2,12 +2,29 @@
 set -eu
 
 REPO="${KONKE_REPO:-sjhshebe/konke-homeassistant}"
-BRANCH="${KONKE_BRANCH:-main}"
+VERSION="${KONKE_VERSION:-latest}"
 ACTION="${KONKE_ACTION:-install}"
 TMP_BASE="${TMPDIR:-/tmp}"
 WORK_DIR="$TMP_BASE/konke-homeassistant-install"
-ARCHIVE="$TMP_BASE/konke-homeassistant-$BRANCH.tar.gz"
-ARCHIVE_URL="https://github.com/$REPO/archive/refs/heads/$BRANCH.tar.gz"
+
+if [ "$VERSION" = "" ]; then
+  VERSION="latest"
+elif [ "$VERSION" != "latest" ]; then
+  case "$VERSION" in
+    v*) ;;
+    *) VERSION="v$VERSION" ;;
+  esac
+fi
+
+ARCHIVE="$TMP_BASE/konke-homeassistant-$VERSION.zip"
+
+if [ "$VERSION" = "latest" ]; then
+  ARCHIVE_URL="https://github.com/$REPO/releases/latest/download/konke.zip"
+  RELEASE_LABEL="latest release"
+else
+  ARCHIVE_URL="https://github.com/$REPO/releases/download/$VERSION/konke.zip"
+  RELEASE_LABEL="release $VERSION"
+fi
 
 if [ -n "${KONKE_HA_CONFIG_DIR:-}" ]; then
   CONFIG_DIR="$KONKE_HA_CONFIG_DIR"
@@ -41,18 +58,34 @@ download() {
   exit 1
 }
 
-echo "Running Konke Smart $ACTION from $REPO ($BRANCH)..."
+extract_archive() {
+  if command -v unzip >/dev/null 2>&1; then
+    unzip -q "$ARCHIVE" -d "$WORK_DIR"
+    return
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -m zipfile -e "$ARCHIVE" "$WORK_DIR"
+    return
+  fi
+
+  echo "unzip or python3 is required to extract konke.zip."
+  exit 1
+}
+
+echo "Running Konke Smart $ACTION from $REPO ($RELEASE_LABEL)..."
 echo "Home Assistant config directory: $CONFIG_DIR"
 
 rm -rf "$WORK_DIR" "$ARCHIVE"
 mkdir -p "$WORK_DIR" "$CONFIG_DIR/custom_components"
 
 download
-tar -xzf "$ARCHIVE" -C "$WORK_DIR"
+extract_archive
 
 SOURCE_DIR="$(find "$WORK_DIR" -type d -path '*/custom_components/konke' | head -n 1)"
 if [ -z "$SOURCE_DIR" ] || [ ! -d "$SOURCE_DIR" ]; then
-  echo "Downloaded package does not contain custom_components/konke."
+  echo "Downloaded release package does not contain custom_components/konke."
+  echo "Make sure the GitHub Release contains an asset named konke.zip."
   exit 1
 fi
 

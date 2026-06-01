@@ -1,10 +1,11 @@
 #!/bin/sh
 set -eu
 
-SCRIPT_URL="https://raw.githubusercontent.com/${KONKE_REPO:-sjhshebe/konke-homeassistant}/${KONKE_BRANCH:-main}/install.sh"
+SCRIPT_REF="${KONKE_SCRIPT_REF:-${KONKE_BRANCH:-main}}"
+SCRIPT_URL="https://raw.githubusercontent.com/${KONKE_REPO:-sjhshebe/konke-homeassistant}/$SCRIPT_REF/install.sh"
 TMP_SCRIPT="${TMPDIR:-/tmp}/konke-homeassistant-install.sh"
 
-echo "Updating Konke Smart integration..."
+echo "Updating Konke Smart integration from GitHub Release..."
 
 if command -v curl >/dev/null 2>&1; then
   if curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 "$SCRIPT_URL" -o "$TMP_SCRIPT"; then
