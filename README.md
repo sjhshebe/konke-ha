@@ -12,9 +12,15 @@
 curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh -o /tmp/konke-install.sh && sh /tmp/konke-install.sh
 ```
 
-脚本会下载 `main` 分支的最新稳定版本，安装到 Home Assistant 的
-`custom_components/konke`，并在安装前备份旧版本。安装完成后会自动重启
-Home Assistant Core。
+脚本会下载最新 GitHub Release 中的 `konke.zip`，安装到 Home Assistant
+的 `custom_components/konke`，并在安装前备份旧版本。安装完成后会自动
+重启 Home Assistant Core。
+
+安装指定版本时设置 `KONKE_VERSION`：
+
+```bash
+curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh -o /tmp/konke-install.sh && KONKE_VERSION=v0.6.0 sh /tmp/konke-install.sh
+```
 
 如果你的环境没有 `curl`，也可以使用：
 
@@ -24,10 +30,11 @@ wget -q -T 30 -t 3 https://raw.githubusercontent.com/sjhshebe/konke-homeassistan
 
 ### 方式二：手动安装
 
-1. 将本目录里的 `custom_components/konke` 复制到 Home Assistant 的 `/config/custom_components/konke`。
-2. 重启 Home Assistant。
-3. 进入 `设置 -> 设备与服务 -> 添加集成`，搜索 `控客智能` 或 `Konke Smart`。
-4. 选择 `手机号和密码` 登录，填写控客账号手机号和密码；集成会自动登录控客接口，并保存后续请求需要的 token。
+1. 从 GitHub Release 下载 `konke.zip`。
+2. 解压后将 `custom_components/konke` 复制到 Home Assistant 的 `/config/custom_components/konke`。
+3. 重启 Home Assistant。
+4. 进入 `设置 -> 设备与服务 -> 添加集成`，搜索 `控客智能` 或 `Konke Smart`。
+5. 选择 `手机号和密码` 登录，填写控客账号手机号和密码；集成会自动登录控客接口，并保存后续请求需要的 token。
 
 ## 更新
 
@@ -39,20 +46,34 @@ wget -q -T 30 -t 3 https://raw.githubusercontent.com/sjhshebe/konke-homeassistan
 curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh -o /tmp/konke-update.sh && sh /tmp/konke-update.sh
 ```
 
+更新到指定版本时设置 `KONKE_VERSION`：
+
+```bash
+curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh -o /tmp/konke-update.sh && KONKE_VERSION=v0.6.0 sh /tmp/konke-update.sh
+```
+
 如果你的环境没有 `curl`，也可以使用：
 
 ```bash
 wget -q -T 30 -t 3 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh -O /tmp/konke-update.sh && sh /tmp/konke-update.sh
 ```
 
-更新脚本会复用安装脚本的逻辑，自动备份旧版本、覆盖安装最新版本，并重启
-Home Assistant Core。
+更新脚本会复用安装脚本的逻辑，自动备份旧版本、覆盖安装最新 Release，并
+重启 Home Assistant Core。
 
 ### 方式二：手动更新
 
-1. 下载最新版本源码。
+1. 从 GitHub Release 下载目标版本的 `konke.zip`。
 2. 用新的 `custom_components/konke` 覆盖 Home Assistant 的 `/config/custom_components/konke`。
 3. 重启 Home Assistant。
+
+## Release 与 CI
+
+- Release 版本号使用 `vX.Y.Z`，并且必须和 `custom_components/konke/manifest.json` 中的 `version` 一致。
+- 每个 Release 会上传 `konke.zip`，包内只包含 `custom_components/konke/`。
+- 一键安装和一键更新默认使用最新稳定 Release；如果 Release 不存在或缺少 `konke.zip`，脚本会失败并提示原因。
+- 回滚到旧版本时，运行一键安装或一键更新命令并设置 `KONKE_VERSION`，例如 `KONKE_VERSION=v0.6.0`。
+- GitHub Actions 会在 `main`、`dev` 的推送和 PR 上自动运行单元测试、编译检查和质量门禁；推送版本 tag 或手动触发 Release workflow 时会自动打包并发布 Release。
 
 ## 已确认接口
 

@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag, for example v0.6.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPYCACHEPREFIX: /tmp/konke-pycache
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Resolve and validate version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.version }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+
+          python - "$TAG" <<'PY'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          tag = sys.argv[1]
+          if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
+              print(f"::error::Release tag must look like v0.6.0, got {tag!r}")
+              raise SystemExit(1)
+
+          manifest = json.loads(Path("custom_components/konke/manifest.json").read_text())
+          version = tag.removeprefix("v")
+          manifest_version = manifest.get("version")
+          if version != manifest_version:
+              print(
+                  "::error::Release tag "
+                  f"{tag} does not match manifest version {manifest_version!r}"
+              )
+              raise SystemExit(1)
+          PY
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests
+
+      - name: Compile integration
+        run: python -m compileall -q custom_components/konke
+
+      - name: Run quality gate
+        run: python scripts/quality_gate.py
+
+      - name: Build release package
+        run: |
+          mkdir -p dist
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZIP_DEFLATED, ZipFile
+
+          root = Path("custom_components/konke")
+          output = Path("dist/konke.zip")
+          with ZipFile(output, "w", ZIP_DEFLATED) as archive:
+              for path in sorted(root.rglob("*")):
+                  if not path.is_file():
+                      continue
+                  if "__pycache__" in path.parts or path.suffix == ".pyc":
+                      continue
+                  archive.write(path, path.as_posix())
+          PY
+
+      - name: Validate release package
+        run: |
+          python - <<'PY'
+          from zipfile import ZipFile
+
+          with ZipFile("dist/konke.zip") as archive:
+              names = archive.namelist()
+
+          if "custom_components/konke/manifest.json" not in names:
+              print("::error::konke.zip is missing custom_components/konke/manifest.json")
+              raise SystemExit(1)
+
+          outside = [name for name in names if not name.startswith("custom_components/konke/")]
+          if outside:
+              print("::error::konke.zip contains files outside custom_components/konke")
+              for name in outside:
+                  print(name)
+              raise SystemExit(1)
+          PY
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            dist/konke.zip \
+            --repo "${{ github.repository }}" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --generate-notes \
+            --target "$GITHUB_SHA"
