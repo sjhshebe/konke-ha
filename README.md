@@ -13,8 +13,8 @@ curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --ht
 ```
 
 脚本会下载最新 GitHub Release 中的 `konke.zip`，安装到 Home Assistant
-的 `custom_components/konke`，并在安装前备份旧版本。安装完成后会自动
-重启 Home Assistant Core。
+的 `custom_components/konke`。安装完成后会自动重启 Home Assistant
+Core。
 
 安装指定版本时设置 `KONKE_VERSION`：
 
@@ -72,7 +72,7 @@ wget -q -T 30 -t 3 https://raw.githubusercontent.com/sjhshebe/konke-homeassistan
 - Release 版本号使用 `vX.Y.Z`，并且必须和 `custom_components/konke/manifest.json` 中的 `version` 一致。
 - 每个 Release 会上传 `konke.zip`，包内只包含 `custom_components/konke/`。
 - 一键安装和一键更新默认使用最新稳定 Release；如果 Release 不存在或缺少 `konke.zip`，脚本会失败并提示原因。
-- 回滚到旧版本时，运行一键安装或一键更新命令并设置 `KONKE_VERSION`，例如 `KONKE_VERSION=v0.6.0`。
+- 回滚到旧版本时，运行一键更新命令并设置 `KONKE_VERSION`，例如 `KONKE_VERSION=v0.6.0`。
 - GitHub Actions 会在 `main`、`dev` 的推送和 PR 上自动运行单元测试、编译检查和质量门禁；推送版本 tag 或手动触发 Release workflow 时会自动打包并发布 Release。
 
 ## 已确认接口
