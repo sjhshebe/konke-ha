@@ -9,6 +9,7 @@ htmlcov/
 
 # Virtual environments and local tooling
 AGENTS.md
+tools-local/
 .venv/
 venv/
 env/
