@@ -4,6 +4,26 @@
 
 ## 安装
 
+### 方式一：一键安装
+
+在 Home Assistant 的 Terminal / SSH 中运行：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh | sh
+```
+
+脚本会下载 `main` 分支的最新稳定版本，安装到 Home Assistant 的
+`custom_components/konke`，并在安装前备份旧版本。安装完成后会自动重启
+Home Assistant Core。
+
+如果你的环境没有 `curl`，也可以使用：
+
+```bash
+wget -qO- https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh | sh
+```
+
+### 方式二：手动安装
+
 1. 将本目录里的 `custom_components/konke` 复制到 Home Assistant 的 `/config/custom_components/konke`。
 2. 重启 Home Assistant。
 3. 进入 `设置 -> 设备与服务 -> 添加集成`，搜索 `控客智能` 或 `Konke Smart`。
