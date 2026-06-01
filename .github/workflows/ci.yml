@@ -31,7 +31,22 @@ jobs:
         run: python -m pip install -r requirements-test.txt
 
       - name: Run unit tests
-        run: python -m pytest tests/components/konke
+        shell: bash
+        run: |
+          set +e
+          python -m pytest tests/components/konke 2>&1 | tee /tmp/konke-pytest.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            python - <<'PY'
+          from pathlib import Path
+
+          text = Path("/tmp/konke-pytest.log").read_text(errors="replace")
+          tail = "\n".join(text.splitlines()[-80:])
+          tail = tail.replace("%", "%25").replace("\n", "%0A").replace("\r", "%0D")
+          print(f"::error title=pytest failed::{tail}")
+          PY
+          fi
+          exit "$status"
 
       - name: Compile integration
         run: python -m compileall -q custom_components/konke
