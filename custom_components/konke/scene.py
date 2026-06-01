@@ -137,6 +137,7 @@ def _remove_internal_scene_entities(
     home_ids = {
         _scene_home_id(entry, coordinator),
         str(entry.data.get(CONF_HOME_ID) or ""),
+        "None",
     }
     home_ids.discard("")
     for scene_id, scene in scenes.items():
