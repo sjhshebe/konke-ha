@@ -9,7 +9,7 @@
 在 Home Assistant 的 Terminal / SSH 中运行：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh | sh
+curl -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh -o /tmp/konke-install.sh && sh /tmp/konke-install.sh
 ```
 
 脚本会下载 `main` 分支的最新稳定版本，安装到 Home Assistant 的
@@ -19,7 +19,7 @@ Home Assistant Core。
 如果你的环境没有 `curl`，也可以使用：
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh | sh
+wget -q https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh -O /tmp/konke-install.sh && sh /tmp/konke-install.sh
 ```
 
 ### 方式二：一键更新
@@ -27,13 +27,13 @@ wget -qO- https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/in
 以后更新到最新稳定版本时，在 Home Assistant 的 Terminal / SSH 中运行：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh | sh
+curl -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh -o /tmp/konke-update.sh && sh /tmp/konke-update.sh
 ```
 
 如果你的环境没有 `curl`，也可以使用：
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh | sh
+wget -q https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh -O /tmp/konke-update.sh && sh /tmp/konke-update.sh
 ```
 
 更新脚本会复用安装脚本的逻辑，自动备份旧版本、覆盖安装最新版本，并重启
