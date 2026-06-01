@@ -21,7 +21,7 @@
       },
       "password": {
         "title": "Use phone and password",
-        "description": "Enter your Konke Smart account. The password is stored in Home Assistant config storage; background password reauthentication is disabled by default to avoid invalidating mobile app sessions.",
+        "description": "Enter your Konke Smart account. The password is stored in Home Assistant config storage; background password reauthentication is enabled by default so expired cloud tokens can recover automatically.",
         "data": {
           "username": "Phone number",
           "password": "Password",

@@ -7,9 +7,12 @@ from datetime import timedelta
 from typing import Any, Mapping
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 
 from .const import (
+    AUTH_METHOD_PASSWORD,
     CONF_ALLOW_PASSWORD_REAUTH,
+    CONF_AUTH_METHOD,
     CONF_CREATE_OFFLINE_DEVICE_ENTITIES,
     CONF_CREATE_SCENE_ENTITIES,
     CONF_DEBUG_RAW_COMMAND,
@@ -43,6 +46,21 @@ class KonkeOptions:
 def options_from_entry(config_entry: ConfigEntry) -> KonkeOptions:
     """Return normalized options for a config entry."""
     return options_from_mapping(config_entry.options)
+
+
+def allow_password_reauth_from_entry(config_entry: ConfigEntry) -> bool:
+    """Return whether background password reauthentication is allowed."""
+    if CONF_ALLOW_PASSWORD_REAUTH in config_entry.options:
+        return _bool_option(
+            config_entry.options.get(CONF_ALLOW_PASSWORD_REAUTH),
+            False,
+        )
+
+    return (
+        config_entry.data.get(CONF_AUTH_METHOD) == AUTH_METHOD_PASSWORD
+        and bool(config_entry.data.get(CONF_USERNAME))
+        and bool(config_entry.data.get(CONF_PASSWORD))
+    )
 
 
 def options_from_mapping(options: Mapping[str, Any]) -> KonkeOptions:

@@ -50,10 +50,10 @@ Do not paste raw captures, tokens, phone numbers, passwords, or home addresses h
     `POST /account/login`.
   - It is not yet proven whether Konke invalidates older sessions on every new
     login, but the integration must assume this is possible.
-  - Since version `0.5.1`, HA keeps refresh-token renewal but disables
-    background username/password re-login by default. This avoids HA silently
-    creating a new login session that may invalidate a phone app or emulator
-    app session.
+  - Password-based HA config entries default to background password
+    reauthentication so expired cloud tokens can recover without manual HA
+    reauth. Disable `allow_password_reauth` in options during packet-capture
+    sessions when preserving a phone app or emulator session is more important.
 - Air-conditioner read-only detail/cache shape:
   - detail fields observed: `userDeviceId`, `deviceName`, `icon`, `state`, `nodeId`, `master`, `parentUserDeviceId`, `gwId`, `device`, `childDevice`, `homeId`, `areaId`, `roomId`, `homeName`, `roomName`, `areaName`, `cache`, `originProductId`, `UDID`.
   - cache fields observed: `productId`, `setTemp`, `curTemp`, `isOnline`, `userDeviceId`, `type`, `speed`, `roomId`, `mode`, `current`, `times`, `cateType`, `innerType`, `online`, `nodeId`, `on`, `onlineState`.

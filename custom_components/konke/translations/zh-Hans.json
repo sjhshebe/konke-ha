@@ -21,7 +21,7 @@
       },
       "password": {
         "title": "使用手机号和密码登录",
-        "description": "填写控客智能账号。密码会保存到 Home Assistant 配置存储中；默认不会在后台用密码自动重新登录，避免和手机 App/模拟器抢登录态。",
+        "description": "填写控客智能账号。密码会保存到 Home Assistant 配置存储中；默认允许后台用密码自动重新登录，使云端 token 失效后能自动恢复。",
         "data": {
           "username": "手机号",
           "password": "密码",

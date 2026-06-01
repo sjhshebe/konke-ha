@@ -22,7 +22,7 @@ from .const import (
     CONF_TOKEN_EXPIRES_AT,
     DOMAIN,
 )
-from .options import options_from_entry
+from .options import allow_password_reauth_from_entry, options_from_entry
 from .profile import (
     DEFAULT_COUNTRY_CODE,
     DEFAULT_REGION_ID,
@@ -101,7 +101,7 @@ class KonkeDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except KonkeApiError:
             _LOGGER.debug("Konke refreshToken flow failed")
 
-        if options_from_entry(self.config_entry).allow_password_reauth is not True:
+        if not allow_password_reauth_from_entry(self.config_entry):
             _LOGGER.debug(
                 "Konke password reauth is disabled; waiting for explicit reauthentication"
             )
