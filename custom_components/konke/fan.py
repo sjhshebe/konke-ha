@@ -37,7 +37,7 @@ from .platform_helpers import (
 ACTION_ADJUST_DOWN_WIND_SPEED = "AdjustDownWindSpeed"
 ACTION_ADJUST_UP_WIND_SPEED = "AdjustUpWindSpeed"
 
-_SPEED_REFRESH_ATTEMPTS = 5
+_SPEED_REFRESH_ATTEMPTS = 15
 _SPEED_REFRESH_DELAY = 1
 
 
