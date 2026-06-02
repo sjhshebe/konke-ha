@@ -80,6 +80,7 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
         """Initialize the fresh-air fan entity."""
         super().__init__(coordinator, entry, device_id)
         self._attr_unique_id = f"{DOMAIN}_{self.konke_home_id}_fan_{device_id}"
+        self._control_lock = asyncio.Lock()
 
     @property
     def name(self) -> str | None:
@@ -137,22 +138,45 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
         **kwargs: Any,
     ) -> None:
         """Turn the fresh-air device on."""
+        async with self._control_lock:
+            await self._async_turn_on_locked(
+                percentage=percentage,
+                preset_mode=preset_mode,
+            )
+
+    async def _async_turn_on_locked(
+        self,
+        *,
+        percentage: int | None = None,
+        preset_mode: str | None = None,
+    ) -> None:
+        """Turn the fresh-air device on while holding the control lock."""
         await self.async_control_device(ACTION_TURN_ON, refresh=False)
         if preset_mode is not None:
-            await self.async_set_preset_mode(preset_mode)
+            await self._async_set_preset_mode_locked(preset_mode)
         elif percentage is not None:
-            await self.async_set_percentage(percentage)
+            await self._async_set_percentage_locked(percentage)
         else:
             await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the fresh-air device off."""
+        async with self._control_lock:
+            await self._async_turn_off_locked()
+
+    async def _async_turn_off_locked(self) -> None:
+        """Turn the fresh-air device off while holding the control lock."""
         await self.async_control_device(ACTION_TURN_OFF)
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set fresh-air wind speed by stepping up or down."""
+        async with self._control_lock:
+            await self._async_set_percentage_locked(percentage)
+
+    async def _async_set_percentage_locked(self, percentage: int) -> None:
+        """Set fresh-air wind speed while holding the control lock."""
         if percentage <= 0:
-            await self.async_turn_off()
+            await self._async_turn_off_locked()
             return
 
         target_speed = _speed_from_percentage(percentage)
@@ -208,6 +232,11 @@ class KonkeFreshAirFan(KonkeDeviceEntity, FanEntity):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set fresh-air work mode."""
+        async with self._control_lock:
+            await self._async_set_preset_mode_locked(preset_mode)
+
+    async def _async_set_preset_mode_locked(self, preset_mode: str) -> None:
+        """Set fresh-air work mode while holding the control lock."""
         mode = FRESH_AIR_PRESET_TO_KONKE.get(str(preset_mode).lower())
         if mode is None:
             raise HomeAssistantError(
