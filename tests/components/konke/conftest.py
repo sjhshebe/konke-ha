@@ -50,6 +50,7 @@ class FakeKonkeClient:
         self.refresh_token = "fake-refresh-token"
         self.commands: list[dict[str, Any]] = []
         self.scene_calls: list[dict[str, Any]] = []
+        self.devices = load_devices()
         self.refresh_access_token = AsyncMock(return_value={})
         self.login = AsyncMock(return_value={})
 
@@ -57,8 +58,7 @@ class FakeKonkeClient:
         """Return normalized coordinator data."""
         from custom_components.konke.models import build_device_indexes
 
-        devices = load_devices()
-        indexes = build_device_indexes(devices)
+        indexes = build_device_indexes(self.devices)
         return {
             "home": home_payload() | {"homeId": configured_home_id or "home-1"},
             "rooms": [],
@@ -91,7 +91,7 @@ class FakeKonkeClient:
                 },
             },
             **indexes,
-            "devices": devices,
+            "devices": self.devices,
             "normalized_devices": indexes["devices"],
             "normalized_devices_by_id": indexes["devices_by_id"],
         }
@@ -119,7 +119,35 @@ class FakeKonkeClient:
             "extra": extra,
         }
         self.commands.append(command)
+        self._apply_device_action(user_device_id, action_name)
         return {"code": 200, "info": "SUCCESS", "data": {}}
+
+    def _apply_device_action(
+        self,
+        user_device_id: str | int,
+        action_name: str,
+    ) -> None:
+        """Apply state changes that tests need to observe after refresh."""
+        device = next(
+            (
+                item
+                for item in self.devices
+                if str(item.get("userDeviceId")) == str(user_device_id)
+            ),
+            None,
+        )
+        if device is None:
+            return
+        state = device.setdefault("cache", {}).setdefault("extension", {})
+        current = state.setdefault("current", {})
+        if action_name == "AdjustDownWindSpeed":
+            speed = max(1, int(current.get("windSpeed", state.get("windSpeed", 1))) - 1)
+            state["windSpeed"] = speed
+            current["windSpeed"] = speed
+        elif action_name == "AdjustUpWindSpeed":
+            speed = min(3, int(current.get("windSpeed", state.get("windSpeed", 1))) + 1)
+            state["windSpeed"] = speed
+            current["windSpeed"] = speed
 
     def extract_token_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Return token fields from a fake payload."""
