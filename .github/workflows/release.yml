@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release tag, for example v0.7.0"
+        description: "Release tag, for example v0.7.1"
         required: true
         type: string
 
@@ -48,7 +48,7 @@ jobs:
 
           tag = sys.argv[1]
           if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
-              print(f"::error::Release tag must look like v0.7.0, got {tag!r}")
+              print(f"::error::Release tag must look like v0.7.1, got {tag!r}")
               raise SystemExit(1)
 
           manifest = json.loads(Path("custom_components/konke/manifest.json").read_text())

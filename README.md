@@ -19,7 +19,7 @@ Core。
 安装指定版本时设置 `KONKE_VERSION`：
 
 ```bash
-curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh -o /tmp/konke-install.sh && KONKE_VERSION=v0.7.0 sh /tmp/konke-install.sh
+curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/install.sh -o /tmp/konke-install.sh && KONKE_VERSION=v0.7.1 sh /tmp/konke-install.sh
 ```
 
 如果你的环境没有 `curl`，也可以使用：
@@ -49,7 +49,7 @@ curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --ht
 更新到指定版本时设置 `KONKE_VERSION`：
 
 ```bash
-curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh -o /tmp/konke-update.sh && KONKE_VERSION=v0.7.0 sh /tmp/konke-update.sh
+curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 -fsSL --http1.1 https://raw.githubusercontent.com/sjhshebe/konke-homeassistant/main/update.sh -o /tmp/konke-update.sh && KONKE_VERSION=v0.7.1 sh /tmp/konke-update.sh
 ```
 
 如果你的环境没有 `curl`，也可以使用：
