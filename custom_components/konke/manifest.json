@@ -2,7 +2,6 @@
   "domain": "konke",
   "name": "Konke Smart",
   "manifest_version": 2,
-  "homeassistant": "2024.1.0",
   "codeowners": ["@sjhshebe"],
   "config_flow": true,
   "documentation": "https://github.com/sjhshebe/konke-homeassistant",
